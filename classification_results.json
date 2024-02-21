@@ -1,26 +1,14 @@
 {
 	"AdaBoost": {
-		"Accuracy": 1.0,
-		"Precision": 1.0,
-		"Recall": 1.0,
-		"F1 Score": 1.0
+		"Cross-Validation Accuracy": 0.9513274336283185
 	},
 	"KNN": {
-		"Accuracy": 0.8875,
-		"Precision": 0.9073842302878599,
-		"Recall": 0.9330759330759331,
-		"F1 Score": 0.9200507614213198
+		"Cross-Validation Accuracy": 0.8080955310523245
 	},
 	"Logistic Regression": {
-		"Accuracy": 0.8357142857142857,
-		"Precision": 0.8896189224704336,
-		"Recall": 0.8712998712998713,
-		"F1 Score": 0.8803641092327699
+		"Cross-Validation Accuracy": 0.80308275361633
 	},
 	"Random Forest": {
-		"Accuracy": 0.9727678571428572,
-		"Precision": 0.9831715210355987,
-		"Recall": 0.9774774774774775,
-		"F1 Score": 0.9803162310422717
+		"Cross-Validation Accuracy": 0.9092750776899657
 	}
 }

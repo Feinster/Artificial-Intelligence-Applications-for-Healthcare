@@ -56,9 +56,11 @@ if not os.path.exists("combined_features.csv"):
 else:
     print("The combined_features.csv file already exists. No need to run the code.")
     df = pd.read_csv('combined_features.csv')
+    
+num_users = df['user_id'].nunique()
 
 # Run classifiers on the combined data
-results = run_classifiers(df.drop(columns=['y']), df['y'])
+results = run_classifiers(df.drop(columns=['y']), df['y'], num_users)
     
 # Save the results to a JSON file
 with open('classification_results.json', 'w') as f:

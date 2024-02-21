@@ -1,4 +1,4 @@
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
@@ -22,13 +22,10 @@ def evaluate_classifier(clf, X_train, X_test, y_train, y_test):
     return accuracy, precision, recall, f1
 
 # Function to run classifiers
-def run_classifiers(X, y):
+def run_classifiers(X, y, n_folds):
     # Standardize input data
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-    
-    # Split data into training and test sets
-    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.3, random_state=42)
     
     # Initialize classifiers
     classifiers = {
@@ -38,10 +35,13 @@ def run_classifiers(X, y):
         'Random Forest': RandomForestClassifier()
     }
     
-    # Evaluate each classifier
+    print("n_folds:", n_folds)
+
+    # Evaluate each classifier with cross-validation
     results = {}
     for clf_name, clf in classifiers.items():
-        accuracy, precision, recall, f1 = evaluate_classifier(clf, X_train, X_test, y_train, y_test)
-        results[clf_name] = {'Accuracy': accuracy, 'Precision': precision, 'Recall': recall, 'F1 Score': f1}
+        # Evaluate classifier using cross-validation
+        cv_scores = cross_val_score(clf, X_scaled, y, cv=n_folds, scoring='accuracy')
+        results[clf_name] = {'Cross-Validation Accuracy': cv_scores.mean()}
     
     return results
