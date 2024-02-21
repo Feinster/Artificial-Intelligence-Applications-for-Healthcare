@@ -28,16 +28,6 @@ def filter_data_by_sleep_intervals(user_folder):
         out_bed_date = row["Out Bed Date"]
         out_bed_time = row["Out Bed Time"]
         
-        if((in_bed_date != out_bed_date) &
-        (
-                        (column_data == in_bed_date) &  # I dati sono nel giorno dell'inizio del periodo di sonno
-                        (column_time >= in_bed_time)  # Dati dopo l'inizio del periodo di sonno
-                    ) | 
-                    (
-                        (column_data == out_bed_date) &  # I dati sono nel giorno della fine del periodo di sonno
-                        (column_time <= out_bed_time)  # Dati prima della fine del periodo di sonno
-                    )):
-        
         filtered_actigraphy_data.append(
             actigraphy_data[
                 (

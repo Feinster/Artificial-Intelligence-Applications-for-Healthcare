@@ -41,17 +41,20 @@ def extract_actigraphy_features[key](actigraphy_data):
         for column in value:
             data = value[column]
             if data:
-                features_per_minute[key][f'mean_{column.lower()}'] = np.nan_to_num(np.mean(data), nan=0)
-                features_per_minute[key][f'median_{column.lower()}'] = np.nan_to_num(np.median(data), nan=0)
-                features_per_minute[key][f'var_{column.lower()}'] = np.nan_to_num(np.var(data), nan=0)
-                features_per_minute[key][f'std_{column.lower()}'] = np.nan_to_num(np.std(data), nan=0)
-                features_per_minute[key][f'max_{column.lower()}'] = np.nan_to_num(np.max(data), nan=0)
-                features_per_minute[key][f'min_{column.lower()}'] = np.nan_to_num(np.min(data), nan=0)
-                features_per_minute[key][f'entropy_{column.lower()}'] = np.nan_to_num(entropy(data), nan=0)
-                features_per_minute[key][f'skew_{column.lower()}'] = np.nan_to_num(skew(data), nan=0)
-                features_per_minute[key][f'kurtosis_{column.lower()}'] = np.nan_to_num(kurtosis(data), nan=0)
-                features_per_minute[key][f'iqr_{column.lower()}'] = np.nan_to_num(np.percentile(data, 75) - np.percentile(data, 25), nan=0)
-                features_per_minute[key][f'mad_{column.lower()}'] = np.nan_to_num(np.mean(np.abs(np.array(data) - np.mean(data))), nan=0)
+                if column in ['Inclinometer Off', 'Inclinometer Standing', 'Inclinometer Sitting', 'Inclinometer Lying']:
+                    features_per_minute[key][f'{column.lower()}'] = 1 if any(data) else 0
+                else:
+                    features_per_minute[key][f'mean_{column.lower()}'] = np.nan_to_num(np.mean(data), nan=0)
+                    features_per_minute[key][f'median_{column.lower()}'] = np.nan_to_num(np.median(data), nan=0)
+                    features_per_minute[key][f'var_{column.lower()}'] = np.nan_to_num(np.var(data), nan=0)
+                    features_per_minute[key][f'std_{column.lower()}'] = np.nan_to_num(np.std(data), nan=0)
+                    features_per_minute[key][f'max_{column.lower()}'] = np.nan_to_num(np.max(data), nan=0)
+                    features_per_minute[key][f'min_{column.lower()}'] = np.nan_to_num(np.min(data), nan=0)
+                    features_per_minute[key][f'entropy_{column.lower()}'] = np.nan_to_num(entropy(data), nan=0)
+                    features_per_minute[key][f'skew_{column.lower()}'] = np.nan_to_num(skew(data), nan=0)
+                    features_per_minute[key][f'kurtosis_{column.lower()}'] = np.nan_to_num(kurtosis(data), nan=0)
+                    features_per_minute[key][f'iqr_{column.lower()}'] = np.nan_to_num(np.percentile(data, 75) - np.percentile(data, 25), nan=0)
+                    features_per_minute[key][f'mad_{column.lower()}'] = np.nan_to_num(np.mean(np.abs(np.array(data) - np.mean(data))), nan=0)
 
     return features_per_minute
 
