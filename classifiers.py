@@ -5,10 +5,15 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.preprocessing import StandardScaler
 
+# Function to evaluate the classifier
 def evaluate_classifier(clf, X_train, X_test, y_train, y_test):
+    # Train the classifier
     clf.fit(X_train, y_train)
+    
+    # Make predictions
     y_pred = clf.predict(X_test)
     
+    # Calculate evaluation metrics
     accuracy = accuracy_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)
@@ -16,15 +21,16 @@ def evaluate_classifier(clf, X_train, X_test, y_train, y_test):
     
     return accuracy, precision, recall, f1
 
+# Function to run classifiers
 def run_classifiers(X, y):
-    # Standardizza i dati in ingresso
+    # Standardize input data
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     
-    # Split dei dati in training e test set
+    # Split data into training and test sets
     X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.3, random_state=42)
     
-    # Inizializza i classificatori
+    # Initialize classifiers
     classifiers = {
         'AdaBoost': AdaBoostClassifier(algorithm='SAMME'),
         'KNN': KNeighborsClassifier(),
@@ -32,7 +38,7 @@ def run_classifiers(X, y):
         'Random Forest': RandomForestClassifier()
     }
     
-    # Valuta ogni classificatore
+    # Evaluate each classifier
     results = {}
     for clf_name, clf in classifiers.items():
         accuracy, precision, recall, f1 = evaluate_classifier(clf, X_train, X_test, y_train, y_test)

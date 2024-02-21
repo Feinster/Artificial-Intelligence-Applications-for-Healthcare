@@ -1,11 +1,16 @@
 from datetime import datetime
 import numpy as np
+import pandas as pd
 from scipy.stats import entropy, skew, kurtosis
 
-def extract_actigraphy_features[key](actigraphy_data):
+# Define a function to extract features from actigraphy data
+def extract_actigraphy_features(actigraphy_data):
+    # Initialize a dictionary to store features per minute
     minute_features = {}
 
+    # Iterate through each row of actigraphy data
     for index, row in actigraphy_data.iterrows():
+        # Extract day and time from the row
         day = row['day']
         time = row['time']
 
@@ -58,10 +63,14 @@ def extract_actigraphy_features[key](actigraphy_data):
 
     return features_per_minute
 
+# Define a function to extract features from RR data
 def extract_rr_features(rr_data):
+    # Initialize a dictionary to store features per minute
     minute_features = {}
 
+    # Iterate through each row of RR data
     for index, row in rr_data.iterrows():
+        # Extract day and time from the row
         day = row['day']
         time = row['time']
 
@@ -71,7 +80,7 @@ def extract_rr_features(rr_data):
         # Create a unique key for each minute (day, hour, minute)
         key = (day, hour, minute)
 
-        # If this key doesn't exist already, create a dictionary for it
+        # If this key doesn't exist already, create a list for it
         if key not in minute_features:
             minute_features[key] = []
 
@@ -97,3 +106,78 @@ def extract_rr_features(rr_data):
             }
             
     return features_per_minute
+
+# Define a function to filter data by sleep intervals
+def filter_data_by_sleep_intervals(user_folder, current_directory):
+
+    # Load sleep data from the sleep.csv file to obtain sleep intervals for this user
+    sleep_data = pd.read_csv(os.path.join(current_directory, user_folder, "sleep.csv"))
+
+    # Load data from Actigraph.csv and RR.csv files
+    actigraphy_data = pd.read_csv(os.path.join(current_directory, user_folder, "Actigraph.csv"))
+    rr_data = pd.read_csv(os.path.join(current_directory, user_folder, "RR.csv"))
+
+    # Initialize lists to store filtered data
+    filtered_actigraphy_data = []
+    filtered_rr_data = []
+
+    # Iterate through rows of sleep_data to obtain sleep intervals
+    for _, row in sleep_data.iterrows():
+        in_bed_date = row["In Bed Date"]
+        in_bed_time = row["In Bed Time"]
+        out_bed_date = row["Out Bed Date"]
+        out_bed_time = row["Out Bed Time"]
+        
+        # Filter actigraphy data based on sleep intervals
+        filtered_actigraphy_data.append(
+            actigraphy_data[
+                (
+                    (actigraphy_data['day'] == in_bed_date) &  # Data is on the same day as the start of the sleep period
+                    (actigraphy_data['time'] >= in_bed_time) & # Data after the start of the sleep period 
+                    (actigraphy_data['time'] <= out_bed_time)  # Data before the end of the sleep period  
+                ) |                                            
+                (                                              
+                    (in_bed_date != out_bed_date) &            # The sleep period runs through midnight
+                    (
+                        (
+                            (actigraphy_data['day'] == in_bed_date) &  # Data after the start of the sleep period
+                            (actigraphy_data['time'] >= in_bed_time)   # Data is on the day of the end of the sleep period
+                        ) | 
+                        (
+                            (actigraphy_data['day'] == out_bed_date) &  # Data is on the day of the end of the sleep period
+                            (actigraphy_data['time'] <= out_bed_time)   # Data before the end of the sleep period 
+                        )
+                    )
+                )
+            ]
+        )
+
+        # Filter RR data based on sleep intervals
+        filtered_rr_data.append(
+            rr_data[
+                (
+                    (rr_data['day'] == in_bed_date) &   # Data is on the same day as the start of the sleep period
+                    (rr_data['time'] >= in_bed_time) &  # Data after the start of the sleep period
+                    (rr_data['time'] <= out_bed_time)   # Data before the end of the sleep period
+                ) | 
+                (
+                    (in_bed_date != out_bed_date) &     # The sleep period runs through midnight
+                    (
+                        (
+                            (rr_data['day'] == in_bed_date) &  # Data is on the day the sleep period began
+                            (rr_data['time'] >= in_bed_time)   # Data after the start of the sleep period
+                        ) | 
+                        (
+                            (rr_data['day'] == out_bed_date) &  # Data is on the day of the end of the sleep period
+                            (rr_data['time'] <= out_bed_time)   # Data before the end of the sleep period
+                        )
+                    )
+                )
+            ]
+        )
+
+    # Concatenate the filtered data into a single DataFrame for each sensor
+    filtered_actigraphy_data = pd.concat(filtered_actigraphy_data)
+    filtered_rr_data = pd.concat(filtered_rr_data)
+
+    return filtered_actigraphy_data, filtered_rr_data
