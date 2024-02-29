@@ -2,6 +2,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy, skew, kurtosis
+import os
 
 # Define a function to extract features from actigraphy data
 def extract_actigraphy_features(actigraphy_data):

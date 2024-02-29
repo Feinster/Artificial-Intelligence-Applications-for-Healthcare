@@ -25,31 +25,6 @@ def evaluate_classifier(clf, X_train, X_test, y_train, y_test):
     return accuracy, precision, recall, f1
 
 # Function to run classifiers
-'''
-def run_classifiers(X, y, n_folds):
-    # Standardize input data
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-    
-    # Initialize classifiers
-    classifiers = {
-        'AdaBoost': AdaBoostClassifier(algorithm='SAMME'),
-        'KNN': KNeighborsClassifier(),
-        'Logistic Regression': LogisticRegression(max_iter=1000),
-        'Random Forest': RandomForestClassifier()
-    }
-    
-    print("n_folds:", n_folds)
-
-    # Evaluate each classifier with cross-validation
-    results = {}
-    for clf_name, clf in classifiers.items():
-        # Evaluate classifier using cross-validation
-        cv_scores = cross_val_score(clf, X_scaled, y, cv=n_folds, scoring='accuracy')
-        results[clf_name] = {'Cross-Validation Accuracy': cv_scores.mean()}
-    
-    return results
-'''
 def run_classifiers(users_df):
 
     # Initialize classifiers

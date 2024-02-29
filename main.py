@@ -26,8 +26,7 @@ if not os.path.exists("combined_features.csv"):
             y = (questionnaire_data['Pittsburgh'] <= 5).astype(int).to_string(index=False)
 
             # Filter actigraphy and RR data by sleep intervals
-            #filtered_actigraphy_data, filtered_rr_data = filter_data_by_sleep_intervals(user_folder, current_directory)
-            filtered_actigraphy_data, filtered_rr_data = filter_data_by_sleep_intervals('user_2', current_directory)
+            filtered_actigraphy_data, filtered_rr_data = filter_data_by_sleep_intervals(user_folder, current_directory)
 
             # Extract features from actigraphy data
             actigraphy_features = extract_actigraphy_features(filtered_actigraphy_data)
@@ -58,11 +57,9 @@ else:
     print("The combined_features.csv file already exists. No need to run the code.")
     df = pd.read_csv('combined_features.csv')
     
-#num_users = df['user_id'].nunique()
 users_df = df.groupby(df.user_id)
 
 # Run classifiers on the combined data
-#results = run_classifiers(df.drop(columns=['y']), df['y'], num_users)
 results = run_classifiers(users_df)
 
 # Assuming 'output.csv' is the name of the CSV file where you want to save the data
