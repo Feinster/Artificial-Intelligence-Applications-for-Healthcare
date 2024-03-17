@@ -3,6 +3,11 @@ import pandas as pd
 from feature_extraction import extract_actigraphy_features, extract_rr_features, filter_data_by_sleep_intervals
 from classifiers import run_classifiers
 import csv
+from feature_selection import (rfe_feature_selection,
+                                random_forest_feature_selection,
+                                extra_trees_feature_selection,
+                                information_gain_feature_selection,
+                                variance_threshold_feature_selection)
 
 # Create an empty DataFrame
 df = pd.DataFrame()
@@ -56,7 +61,16 @@ if not os.path.exists("combined_features.csv"):
 else:
     print("The combined_features.csv file already exists. No need to run the code.")
     df = pd.read_csv('combined_features.csv')
-    
+
+#PROVA
+# Feature selection
+#X = df.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
+#y = df['y']
+#selected_features = rfe_feature_selection(X, y)
+#df_selected = df[['user_id', 'day', 'hour', 'minute', 'y'] + selected_features.tolist()]
+#users_df = df_selected.groupby(df_selected.user_id)
+#FINE PROVA
+
 users_df = df.groupby(df.user_id)
 
 # Run classifiers on the combined data
@@ -74,4 +88,5 @@ with open(csv_file_path, 'w', newline='') as csvfile:
     # Write data rows
     for key, values in results.items():
         model, user_id, classe = key
-        csv_writer.writerow([model, user_id, classe] + list(values))
+        if classe == 0:
+            csv_writer.writerow([model, user_id, classe] + list(values))
