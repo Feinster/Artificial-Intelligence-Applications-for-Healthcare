@@ -8,7 +8,6 @@ import pandas as pd
 from oversampling import perform_ROS, perform_smote, perform_borderline_smote, perform_safe_level_smote, \
     perform_adasyn, perform_kmeans_smote, perform_dbscan_bsmote, perform_gaussian_mixture_clustering
 
-
 # Function to evaluate the classifier
 def evaluate_classifier(clf, X_train, X_test, y_train, y_test):
     # Train the classifier

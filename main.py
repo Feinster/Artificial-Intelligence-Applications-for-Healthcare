@@ -8,6 +8,14 @@ from feature_selection import (rfe_feature_selection,
                                 extra_trees_feature_selection,
                                 information_gain_feature_selection,
                                 variance_threshold_feature_selection)
+from config_loader import ConfigLoader
+
+config = ConfigLoader.get_instance()
+
+value = config.get('feature.selection').data
+write_class_value = config.get('write.class').data
+write_classes = [int(c) for c in write_class_value.split(',')]
+print("Valore della chiave 'key':", write_classes)
 
 # Create an empty DataFrame
 df = pd.DataFrame()
@@ -88,5 +96,5 @@ with open(csv_file_path, 'w', newline='') as csvfile:
     # Write data rows
     for key, values in results.items():
         model, user_id, classe = key
-        if classe == 0:
+        if classe in write_classes:
             csv_writer.writerow([model, user_id, classe] + list(values))

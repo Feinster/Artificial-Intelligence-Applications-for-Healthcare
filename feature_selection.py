@@ -1,4 +1,3 @@
-# Import necessary libraries
 from sklearn.feature_selection import RFE, SelectFromModel, VarianceThreshold
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from sklearn.tree import DecisionTreeClassifier
