@@ -4,18 +4,16 @@ from feature_extraction import extract_actigraphy_features, extract_rr_features,
 from classifiers import run_classifiers
 import csv
 from feature_selection import (rfe_feature_selection,
-                                random_forest_feature_selection,
-                                extra_trees_feature_selection,
-                                information_gain_feature_selection,
-                                variance_threshold_feature_selection)
+                               random_forest_feature_selection,
+                               extra_trees_feature_selection,
+                               information_gain_feature_selection,
+                               variance_threshold_feature_selection)
 from config_loader import ConfigLoader
 
 config = ConfigLoader.get_instance()
-
 value = config.get('feature.selection').data
 write_class_value = config.get('write.class').data
 write_classes = [int(c) for c in write_class_value.split(',')]
-print("Valore della chiave 'key':", write_classes)
 
 # Create an empty DataFrame
 df = pd.DataFrame()
@@ -46,7 +44,7 @@ if not os.path.exists("combined_features.csv"):
 
             # Extract features from RR interval
             rr_features = extract_rr_features(filtered_rr_data)
-            
+
             # Direct combination of features for each minute
             for minute_key in actigraphy_features.keys():
                 if minute_key in rr_features.keys():  # Make sure there is data for both sensors for this minute
@@ -60,7 +58,7 @@ if not os.path.exists("combined_features.csv"):
                         'y': y
                     }
                     all_combined_features.append(minute_dict)
-        
+
     # Convert the list of dictionaries into a pandas DataFrame
     df = pd.DataFrame(all_combined_features)
 
@@ -70,14 +68,14 @@ else:
     print("The combined_features.csv file already exists. No need to run the code.")
     df = pd.read_csv('combined_features.csv')
 
-#PROVA
+# PROVA
 # Feature selection
-#X = df.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
-#y = df['y']
-#selected_features = rfe_feature_selection(X, y)
-#df_selected = df[['user_id', 'day', 'hour', 'minute', 'y'] + selected_features.tolist()]
-#users_df = df_selected.groupby(df_selected.user_id)
-#FINE PROVA
+# X = df.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
+# y = df['y']
+# selected_features = rfe_feature_selection(X, y)
+# df_selected = df[['user_id', 'day', 'hour', 'minute', 'y'] + selected_features.tolist()]
+# users_df = df_selected.groupby(df_selected.user_id)
+# FINE PROVA
 
 users_df = df.groupby(df.user_id)
 
