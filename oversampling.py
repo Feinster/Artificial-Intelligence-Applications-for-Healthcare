@@ -5,9 +5,9 @@ from clover.over_sampling import ClusterOverSampler
 from sklearn.mixture import GaussianMixture
 
 ROS = '1'
-SMOTE = '2'
+SMOTE_METHOD = '2'
 BORDERLINE_SMOTE = '3'
-ADASYN = '5'
+ADASYN_METHOD = '5'
 KMEANS_SMOTE = '6'
 DBSCAN_SMOTE = '7'
 
@@ -24,8 +24,8 @@ def perform_smote(x, y, sampling_strategy='minority'):
     return x_resampled, y_resampled
 
 
-def perform_borderline_smote(x, y, sampling_strategy='minority', kind='borderline-1'):
-    borderline_smote = BorderlineSMOTE(sampling_strategy=sampling_strategy, random_state=42, kind=kind)
+def perform_borderline_smote(x, y, sampling_strategy='all', kind='borderline-1'):
+    borderline_smote = BorderlineSMOTE(sampling_strategy=sampling_strategy, random_state=42, kind=kind, k_neighbors=3)
     x_resampled, y_resampled = borderline_smote.fit_resample(x, y)
     return x_resampled, y_resampled
 
@@ -70,11 +70,11 @@ def perform_gaussian_mixture_clustering(x, n_components=2, random_state=0):
 def perform_oversampling_method(x, y, method_index):
     if method_index == ROS:
         x_resampled, y_resampled = perform_ROS(x, y)
-    elif method_index == SMOTE:
+    elif method_index == SMOTE_METHOD:
         x_resampled, y_resampled = perform_smote(x, y)
     elif method_index == BORDERLINE_SMOTE:
         x_resampled, y_resampled = perform_borderline_smote(x, y)
-    elif method_index == ADASYN:
+    elif method_index == ADASYN_METHOD:
         x_resampled, y_resampled = perform_adasyn(x, y)
     elif method_index == KMEANS_SMOTE:
         x_resampled, y_resampled = perform_kmeans_smote(x, y)
