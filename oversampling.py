@@ -25,7 +25,7 @@ def perform_smote(x, y, sampling_strategy='minority'):
 
 
 def perform_borderline_smote(x, y, sampling_strategy='all', kind='borderline-1'):
-    borderline_smote = BorderlineSMOTE(sampling_strategy=sampling_strategy, random_state=42, kind=kind, k_neighbors=3)
+    borderline_smote = BorderlineSMOTE(sampling_strategy=sampling_strategy, random_state=42, kind=kind)
     x_resampled, y_resampled = borderline_smote.fit_resample(x, y)
     return x_resampled, y_resampled
 
