@@ -55,7 +55,7 @@ if not os.path.exists("combined_features.csv"):
                         'minute': minute_key[2],
                         **actigraphy_features[minute_key],  # Add all actigraphy features
                         **rr_features[minute_key],  # Add all RR interval features
-                        'y': y
+                        'y': int(y)
                     }
                     all_combined_features.append(minute_dict)
 
