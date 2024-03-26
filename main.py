@@ -9,6 +9,10 @@ from feature_selection import (rfe_feature_selection,
                                information_gain_feature_selection,
                                variance_threshold_feature_selection)
 from config_loader import ConfigLoader
+import pgmpy.estimators as estimators
+from pgmpy.models import BayesianNetwork
+from pgmpy.sampling import BayesianModelSampling
+from sklearn.preprocessing import StandardScaler
 
 config = ConfigLoader.get_instance()
 value = config.get('feature.selection').data
@@ -76,6 +80,16 @@ else:
 # df_selected = df[['user_id', 'day', 'hour', 'minute', 'y'] + selected_features.tolist()]
 # users_df = df_selected.groupby(df_selected.user_id)
 # FINE PROVA
+scaler = StandardScaler()
+scaler.fit(df)
+df_scaled = scaler.transform(df)
+df_scaled = pd.DataFrame(df_scaled, columns=df.columns)
+dag = estimators.HillClimbSearch(data=df_scaled).estimate(scoring_method='k2score', max_indegree=4, max_iter=1000,
+                                                          show_progress=True)
+network = BayesianNetwork(dag)
+network.fit(df_scaled)
+model = BayesianModelSampling(network)
+model.forward_sample(50)
 
 users_df = df.groupby(df.user_id)
 
