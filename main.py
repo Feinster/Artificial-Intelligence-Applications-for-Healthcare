@@ -13,6 +13,7 @@ import pgmpy.estimators as estimators
 from pgmpy.models import BayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
 from sklearn.preprocessing import StandardScaler
+import pickle
 
 config = ConfigLoader.get_instance()
 value = config.get('feature.selection').data
@@ -80,12 +81,21 @@ else:
 # df_selected = df[['user_id', 'day', 'hour', 'minute', 'y'] + selected_features.tolist()]
 # users_df = df_selected.groupby(df_selected.user_id)
 # FINE PROVA
+
 scaler = StandardScaler()
 scaler.fit(df)
 df_scaled = scaler.transform(df)
 df_scaled = pd.DataFrame(df_scaled, columns=df.columns)
-dag = estimators.HillClimbSearch(data=df_scaled).estimate(scoring_method='k2score', max_indegree=4, max_iter=1000,
-                                                          show_progress=True)
+    
+if not os.path.exists("dag.pkl"):
+    dag = estimators.HillClimbSearch(data=df_scaled).estimate(scoring_method='k2score', max_indegree=4, max_iter=10,
+                                                              show_progress=True)
+    with open('dag.pkl', 'wb') as f:
+        pickle.dump(dag, f)
+else:
+    with open('dag.pkl', 'rb') as f:
+        dag = pickle.load(f)
+        
 network = BayesianNetwork(dag)
 network.fit(df_scaled)
 model = BayesianModelSampling(network)
