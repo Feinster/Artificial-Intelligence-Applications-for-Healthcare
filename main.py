@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from feature_extraction import extract_actigraphy_features, extract_rr_features, filter_data_by_sleep_intervals
-from classifiers import run_classifiers
+from classifiers import run_classifiers, run_classifiers_after_deep, save_results_to_csv, run_classifiers_after_deep2
 import csv
 from feature_selection import perform_feature_selection_method
 from config_loader import ConfigLoader
@@ -14,6 +14,7 @@ from DataSynthesizer.DataDescriber import DataDescriber
 from DataSynthesizer.DataGenerator import DataGenerator
 from DataSynthesizer.lib.utils import display_bayesian_network
 from sklearn.model_selection import train_test_split
+import json
 
 
 def main():
@@ -76,18 +77,37 @@ def main():
         print("The combined_features.csv file already exists. No need to run the code.")
         df = pd.read_csv('combined_features.csv')
 
-    x_train, x_test, y_train, y_test = split_dataset('combined_features.csv', 'y')
-    x_train = x_train.drop(columns=['user_id', 'day', 'hour', 'minute'])
-    x_test = x_test.drop(columns=['user_id', 'day', 'hour', 'minute'])
+    if not os.path.exists("train_data_deep.csv") or not os.path.exists("test_data_deep.csv"):
+        user_classes = df.groupby('user_id')['y'].mean()
+        train_users, test_users = train_test_split(user_classes.index, test_size=0.3, stratify=user_classes)
 
-    # Feature selection
-    feature_selection_algorithm_to_run = config.get('feature.selection').data
+        train_data = df[df['user_id'].isin(train_users)]
+        test_data = df[df['user_id'].isin(test_users)]
 
-    selected_train_features = perform_feature_selection_method(x_train, y_train,
-                                                               feature_selection_algorithm_to_run)
+        x_train = train_data.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
+        y_train = train_data['y']
+        x_test = test_data.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
+        y_test = test_data['y']
 
-    train_data = pd.concat([x_train[selected_train_features.tolist()], y_train], axis=1)
-    train_data.to_csv('train_data_deep.csv', index=False)
+        # Feature selection
+        feature_selection_algorithm_to_run = config.get('feature.selection').data
+
+        selected_train_features = perform_feature_selection_method(x_train, y_train,
+                                                                   feature_selection_algorithm_to_run)
+
+        train_data = pd.concat([x_train[selected_train_features.tolist()], y_train], axis=1)
+        train_data.to_csv('train_data_deep.csv', index=False)
+        test_data.to_csv('test_data_deep.csv', index=False)
+    else:
+        print("The train_data_deep.csv and test_data_deep.csv files already exists. No need to run the code.")
+        train_data = pd.read_csv("train_data_deep.csv")
+
+        test_data = pd.read_csv("test_data_deep.csv")
+        x_test = test_data.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
+        y_test = test_data['y']
+
+        selected_train_features = pd.read_csv("train_data_deep.csv", usecols=lambda column: column != 'y', nrows=0)
+        selected_train_features = selected_train_features.columns
 
     # df_selected = df[['user_id', 'day', 'hour', 'minute', 'y'] + selected_train_features.tolist()]
     # users_df = df_selected.groupby(df_selected.user_id)
@@ -114,35 +134,60 @@ def main():
     model.forward_sample(50)
     FINE PROVA pgmpy deep method'''
 
-    '''
-    # Specify categorical attributes
-    categorical_attributes = {'y': True}
-    # Define privacy settings
-    epsilon = 0.1
-    degree_of_bayesian_network = 2
-    num_tuples_to_generate = 10
-    # Initialize DataDescriber with category threshold
-    describer = DataDescriber(category_threshold=5)
-    # Describe the dataset to create a Bayesian network
-    try:
-        describer.describe_dataset_in_correlated_attribute_mode(dataset_file='combined_features.csv',
+    description_file = 'dataset_description.json'
+    if not os.path.exists(description_file):
+        epsilon = 0
+        degree_of_bayesian_network = 2
+        describer = DataDescriber()
+        # Describe the dataset to create a Bayesian network
+        describer.describe_dataset_in_correlated_attribute_mode(dataset_file='train_data_deep.csv',
                                                                 epsilon=epsilon,
                                                                 k=degree_of_bayesian_network)
-    except Exception as e:
-        print("Errore:", e)
 
-    # Save dataset description to a JSON file
-    description_file = 'retail_dataset_description.json'
-    describer.save_dataset_description_to_file(description_file)
-    # Display the Bayesian network
-    display_bayesian_network(describer.bayesian_network)
+        # Save dataset description to a JSON file
+        describer.save_dataset_description_to_file(description_file)
+        # Display the Bayesian network
+        # display_bayesian_network(describer.bayesian_network)
+    else:
+        print("The dataset_description.json file already exists. No need to run the code.")
 
-    generator = DataGenerator()
-    generator.generate_dataset_in_correlated_attribute_mode(num_tuples_to_generate, description_file)
-    # Save synthetic data to a CSV file
-    synthetic_data_file = 'synthetic_retail_data.csv'
-    generator.save_synthetic_data(synthetic_data_file)
+    synthetic_data_file = 'synthetic_data.csv'
+    if not os.path.exists(synthetic_data_file):
+        num_tuples_to_generate = 100000
+        generator = DataGenerator()
+        generator.generate_dataset_in_correlated_attribute_mode(num_tuples_to_generate, description_file)
+        # Save synthetic data to a CSV file
+        generator.save_synthetic_data(synthetic_data_file)
+    else:
+        print("The synthetic_data.csv file already exists. No need to run the code.")
 
+    df_after_deep = pd.read_csv(synthetic_data_file)
+    x_train_after_deep = df_after_deep.drop(columns=['y'])
+    y_train_after_deep = df_after_deep['y']
+
+    x_test = x_test[selected_train_features.tolist()]
+
+    test_data = test_data[['y'] + selected_train_features.tolist()]
+    users_df = test_data.groupby(df.user_id)
+    # Assuming 'output.csv' is the name of the CSV file where you want to save the data
+    csv_file_path = 'output.csv'
+    results_after_deep = run_classifiers_after_deep2(x_train_after_deep, y_train_after_deep, users_df)
+    with open(csv_file_path, 'w', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile)
+
+        # Write header row
+        csv_writer.writerow(['Model', 'User_id', 'Class', 'Acc', 'Precision', 'Recall', 'F1-score'])
+
+        # Write data rows
+        for key, values in results_after_deep.items():
+            model, user_id, classe = key
+            if classe in write_classes:
+                csv_writer.writerow([model, user_id, classe] + list(values))
+
+    # results_after_deep = run_classifiers_after_deep(x_train_after_deep, x_test, y_train_after_deep, y_test)
+    # save_results_to_csv(results_after_deep, 'results.csv')
+
+    '''
     users_df = df.groupby(df.user_id)
 
     # Run classifiers on the combined data
@@ -163,18 +208,6 @@ def main():
             if classe in write_classes:
                 csv_writer.writerow([model, user_id, classe] + list(values))
 '''
-
-
-def split_dataset(file_name, target_column, test_size=0.3, random_state=42):
-    df = pd.read_csv(file_name)
-
-    x = df.drop(target_column, axis=1)
-    y = df[target_column]
-
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_size, stratify=y,
-                                                        random_state=random_state)
-
-    return x_train, x_test, y_train, y_test
 
 
 if __name__ == "__main__":

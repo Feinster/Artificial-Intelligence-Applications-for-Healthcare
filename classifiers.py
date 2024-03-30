@@ -7,15 +7,16 @@ from sklearn.preprocessing import StandardScaler
 import pandas as pd
 from oversampling import perform_oversampling_method, perform_safe_level_smote, perform_gaussian_mixture_clustering
 from config_loader import ConfigLoader
+import csv
 
 
 # Function to evaluate the classifier
-def evaluate_classifier(clf, X_train, X_test, y_train, y_test):
+def evaluate_classifier(clf, x_train, x_test, y_train, y_test):
     # Train the classifier
-    clf.fit(X_train, y_train)
+    #clf.fit(x_train, y_train)
 
     # Make predictions
-    y_pred = clf.predict(X_test)
+    y_pred = clf.predict(x_test)
 
     # Calculate evaluation metrics
     accuracy = accuracy_score(y_test, y_pred)
@@ -72,3 +73,62 @@ def run_classifiers(users_df):
             results[clf_name, test_key, y] = evaluate_classifier(clf, x_train_scaled, x_test_scaled, y_train, y_test)
 
     return results
+
+
+def run_classifiers_after_deep(x_train, x_test, y_train, y_test):
+    # Initialize classifiers
+    classifiers = {
+        'AdaBoost': AdaBoostClassifier(algorithm='SAMME'),
+        'KNN': KNeighborsClassifier(),
+        'Logistic Regression': LogisticRegression(max_iter=1000),
+        'Random Forest': RandomForestClassifier()
+    }
+
+    scaler = StandardScaler()
+    x_train_scaled = scaler.fit_transform(x_train)
+    x_test_scaled = scaler.transform(x_test)
+    results = {}
+
+    for clf_name, clf in classifiers.items():
+        results[clf_name] = evaluate_classifier(clf, x_train_scaled, x_test_scaled, y_train, y_test)
+
+    return results
+
+
+def run_classifiers_after_deep2(x_train, y_train, test_data):
+    # Initialize classifiers
+    classifiers = {
+        'AdaBoost': AdaBoostClassifier(algorithm='SAMME'),
+        'KNN': KNeighborsClassifier(),
+        'Logistic Regression': LogisticRegression(max_iter=1000),
+        'Random Forest': RandomForestClassifier()
+    }
+
+    scaler = StandardScaler()
+    x_train_scaled = scaler.fit_transform(x_train)
+    results = {}
+
+    for clf_name, clf in classifiers.items():
+        clf.fit(x_train_scaled, y_train)
+        for test_key, test_group in test_data:
+            x_test = test_group.drop(columns=['y'])
+            x_test_scaled = scaler.transform(x_test)
+            y_test = test_group['y']
+            y = y_test.iloc[-1]
+            print('Running classifier {}...'.format(clf_name))
+            print('test key: {}'.format(test_key))
+            results[clf_name, test_key, y] = evaluate_classifier(clf, x_train_scaled, x_test_scaled, y_train, y_test)
+
+    return results
+
+
+def save_results_to_csv(results, filename):
+    with open(filename, 'w', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile)
+
+        # Write the header row
+        csv_writer.writerow(['Model', 'Accuracy', 'Precision', 'Recall', 'F1-score'])
+
+        # Write the results for each classifier
+        for model, metrics in results.items():
+            csv_writer.writerow([model, *metrics])
