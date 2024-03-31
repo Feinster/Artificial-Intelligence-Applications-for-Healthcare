@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from feature_extraction import extract_actigraphy_features, extract_rr_features, filter_data_by_sleep_intervals
-from classifiers import run_classifiers, run_classifiers_after_deep, save_results_to_csv, run_classifiers_after_deep2
+from classifiers import run_classifiers, run_classifiers_after_deep, write_results_to_csv
 import csv
 from feature_selection import perform_feature_selection_method
 from config_loader import ConfigLoader
@@ -19,7 +19,6 @@ import json
 
 def main():
     config = ConfigLoader.get_instance()
-    value = config.get('feature.selection').data
     write_class_value = config.get('write.class').data
     write_classes = [int(c) for c in write_class_value.split(',')]
 
@@ -78,40 +77,50 @@ def main():
         df = pd.read_csv('combined_features.csv')
 
     if not os.path.exists("train_data_deep.csv") or not os.path.exists("test_data_deep.csv"):
+        #divido gli utenti in 70-30 garantendo il bilanciamento della y
         user_classes = df.groupby('user_id')['y'].mean()
         train_users, test_users = train_test_split(user_classes.index, test_size=0.3, stratify=user_classes)
 
         train_data = df[df['user_id'].isin(train_users)]
         test_data = df[df['user_id'].isin(test_users)]
 
+        #elimino feature inutili a mano
         x_train = train_data.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
         y_train = train_data['y']
         x_test = test_data.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
         y_test = test_data['y']
+        y_test_user_id = test_data['user_id']
 
+        #faccio da subito la standardizzazione dati così non la faccio più dopo
+        scaler = StandardScaler()
+        x_train_scaled = pd.DataFrame(scaler.fit_transform(x_train), columns=x_train.columns)
+        x_test_scaled = pd.DataFrame(scaler.transform(x_test), columns=x_test.columns)
+    
         # Feature selection
         feature_selection_algorithm_to_run = config.get('feature.selection').data
 
-        selected_train_features = perform_feature_selection_method(x_train, y_train,
+        selected_train_features = perform_feature_selection_method(x_train_scaled, y_train,
                                                                    feature_selection_algorithm_to_run)
-
-        train_data = pd.concat([x_train[selected_train_features.tolist()], y_train], axis=1)
+        #in base alle feature migliori filtro il train e il test e li salvo su csv
+        train_data = x_train_scaled[selected_train_features.tolist()]
+        train_data = train_data.assign(y=y_train.values)
         train_data.to_csv('train_data_deep.csv', index=False)
+
+        test_data = x_test_scaled
+        test_data = test_data.assign(y=y_test.values)
+        test_data = test_data.assign(user_id=y_test_user_id.values)
         test_data.to_csv('test_data_deep.csv', index=False)
     else:
         print("The train_data_deep.csv and test_data_deep.csv files already exists. No need to run the code.")
         train_data = pd.read_csv("train_data_deep.csv")
-
         test_data = pd.read_csv("test_data_deep.csv")
-        x_test = test_data.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
+        x_train = train_data.drop(columns=['y'])
+        y_train = train_data['y']
+        x_test = test_data.drop(columns=['user_id', 'y'])
         y_test = test_data['y']
 
         selected_train_features = pd.read_csv("train_data_deep.csv", usecols=lambda column: column != 'y', nrows=0)
         selected_train_features = selected_train_features.columns
-
-    # df_selected = df[['user_id', 'day', 'hour', 'minute', 'y'] + selected_train_features.tolist()]
-    # users_df = df_selected.groupby(df_selected.user_id)
-    # Feature selection
 
     ''' PROVA pgmpy deep method
     scaler = StandardScaler()
@@ -134,6 +143,7 @@ def main():
     model.forward_sample(50)
     FINE PROVA pgmpy deep method'''
 
+    #creo la rete bayesiana che descrive il training set e lo salvo su .json
     description_file = 'dataset_description.json'
     if not os.path.exists(description_file):
         epsilon = 0
@@ -151,6 +161,7 @@ def main():
     else:
         print("The dataset_description.json file already exists. No need to run the code.")
 
+    #creo i dati sintetici e li salvo su file .csv
     synthetic_data_file = 'synthetic_data.csv'
     if not os.path.exists(synthetic_data_file):
         num_tuples_to_generate = 100000
@@ -161,53 +172,31 @@ def main():
     else:
         print("The synthetic_data.csv file already exists. No need to run the code.")
 
+    #lancio i classificatori, passando i dati sintetici come train set, 
+    #mentre uso il 30 lasciato all'inizio come test set
     df_after_deep = pd.read_csv(synthetic_data_file)
     x_train_after_deep = df_after_deep.drop(columns=['y'])
     y_train_after_deep = df_after_deep['y']
 
     x_test = x_test[selected_train_features.tolist()]
 
+    test_data_user_id = test_data.user_id
     test_data = test_data[['y'] + selected_train_features.tolist()]
-    users_df = test_data.groupby(df.user_id)
-    # Assuming 'output.csv' is the name of the CSV file where you want to save the data
-    csv_file_path = 'output.csv'
-    results_after_deep = run_classifiers_after_deep2(x_train_after_deep, y_train_after_deep, users_df)
-    with open(csv_file_path, 'w', newline='') as csvfile:
-        csv_writer = csv.writer(csvfile)
+    df_test = test_data.groupby(test_data_user_id)
 
-        # Write header row
-        csv_writer.writerow(['Model', 'User_id', 'Class', 'Acc', 'Precision', 'Recall', 'F1-score'])
+    #results_after_deep = run_classifiers_after_deep(x_train_after_deep, y_train_after_deep, df_test)
+    #write_results_to_csv("output_synthetic.csv", results_after_deep, write_classes)
 
-        # Write data rows
-        for key, values in results_after_deep.items():
-            model, user_id, classe = key
-            if classe in write_classes:
-                csv_writer.writerow([model, user_id, classe] + list(values))
+    #lancio i classificatori passando il 70% iniziale come train set
+    #mentre uso il 30 lasciato all'inizio come test set
+    #results_after_deep = run_classifiers_after_deep(x_train, y_train, df_test)
+    #write_results_to_csv("output_no_synthetic.csv", results_after_deep, write_classes)
 
-    # results_after_deep = run_classifiers_after_deep(x_train_after_deep, x_test, y_train_after_deep, y_test)
-    # save_results_to_csv(results_after_deep, 'results.csv')
-
-    '''
+    #lancio i classificatori senza operazioni di deep learning
     users_df = df.groupby(df.user_id)
-
     # Run classifiers on the combined data
     results = run_classifiers(users_df)
-
-    # Assuming 'output.csv' is the name of the CSV file where you want to save the data
-    csv_file_path = 'output.csv'
-
-    with open(csv_file_path, 'w', newline='') as csvfile:
-        csv_writer = csv.writer(csvfile)
-
-        # Write header row
-        csv_writer.writerow(['Model', 'User_id', 'Class', 'Acc', 'Precision', 'Recall', 'F1-score'])
-
-        # Write data rows
-        for key, values in results.items():
-            model, user_id, classe = key
-            if classe in write_classes:
-                csv_writer.writerow([model, user_id, classe] + list(values))
-'''
+    write_results_to_csv("output_basic_oversampled.csv", results, write_classes)
 
 
 if __name__ == "__main__":

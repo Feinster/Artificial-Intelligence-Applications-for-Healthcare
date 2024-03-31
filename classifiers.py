@@ -12,8 +12,8 @@ import csv
 
 # Function to evaluate the classifier
 def evaluate_classifier(clf, x_train, x_test, y_train, y_test):
-    # Train the classifier
-    #clf.fit(x_train, y_train)
+    # Train the classifier 
+    #clf.fit(x_train, y_train) #da scommentare per la versione senza deep
 
     # Make predictions
     y_pred = clf.predict(x_test)
@@ -45,13 +45,14 @@ def run_classifiers(users_df):
     scaler = StandardScaler()
     results = {}
 
-    if oversampling_algorithm_to_run == '4':
-        users_df = perform_safe_level_smote(users_df, 'y')
-
     for clf_name, clf in classifiers.items():
         for test_key, test_group in users_df:
 
             train_data = pd.concat([group for key, group in users_df if key != test_key])
+            
+            if oversampling_algorithm_to_run == '4':
+                train_data = perform_safe_level_smote(train_data, 'y')
+
             x_train = train_data.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
 
             scaler.fit(x_train)
@@ -74,8 +75,7 @@ def run_classifiers(users_df):
 
     return results
 
-
-def run_classifiers_after_deep(x_train, x_test, y_train, y_test):
+def run_classifiers_after_deep(x_train, y_train, test_data):
     # Initialize classifiers
     classifiers = {
         'AdaBoost': AdaBoostClassifier(algorithm='SAMME'),
@@ -84,51 +84,30 @@ def run_classifiers_after_deep(x_train, x_test, y_train, y_test):
         'Random Forest': RandomForestClassifier()
     }
 
-    scaler = StandardScaler()
-    x_train_scaled = scaler.fit_transform(x_train)
-    x_test_scaled = scaler.transform(x_test)
     results = {}
 
     for clf_name, clf in classifiers.items():
-        results[clf_name] = evaluate_classifier(clf, x_train_scaled, x_test_scaled, y_train, y_test)
-
-    return results
-
-
-def run_classifiers_after_deep2(x_train, y_train, test_data):
-    # Initialize classifiers
-    classifiers = {
-        'AdaBoost': AdaBoostClassifier(algorithm='SAMME'),
-        'KNN': KNeighborsClassifier(),
-        'Logistic Regression': LogisticRegression(max_iter=1000),
-        'Random Forest': RandomForestClassifier()
-    }
-
-    scaler = StandardScaler()
-    x_train_scaled = scaler.fit_transform(x_train)
-    results = {}
-
-    for clf_name, clf in classifiers.items():
-        clf.fit(x_train_scaled, y_train)
+        clf.fit(x_train, y_train)
         for test_key, test_group in test_data:
             x_test = test_group.drop(columns=['y'])
-            x_test_scaled = scaler.transform(x_test)
+            #test_group.to_csv('test_group_{}_{}.csv'.format(clf_name, test_key), index=False)
             y_test = test_group['y']
             y = y_test.iloc[-1]
             print('Running classifier {}...'.format(clf_name))
             print('test key: {}'.format(test_key))
-            results[clf_name, test_key, y] = evaluate_classifier(clf, x_train_scaled, x_test_scaled, y_train, y_test)
+            results[clf_name, test_key, y] = evaluate_classifier(clf, x_train, x_test, y_train, y_test)
 
     return results
 
-
-def save_results_to_csv(results, filename):
-    with open(filename, 'w', newline='') as csvfile:
+def write_results_to_csv(csv_file_path, results, write_classes):
+    with open(csv_file_path, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile)
 
-        # Write the header row
-        csv_writer.writerow(['Model', 'Accuracy', 'Precision', 'Recall', 'F1-score'])
+        # Write header row
+        csv_writer.writerow(['Model', 'User_id', 'Class', 'Acc', 'Precision', 'Recall', 'F1-score'])
 
-        # Write the results for each classifier
-        for model, metrics in results.items():
-            csv_writer.writerow([model, *metrics])
+        # Write data rows
+        for key, values in results.items():
+            model, user_id, classe = key
+            if classe in write_classes:
+                csv_writer.writerow([model, user_id, classe] + list(values))
