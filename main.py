@@ -77,31 +77,38 @@ def main():
         df = pd.read_csv('combined_features.csv')
 
     if not os.path.exists("train_data_deep.csv") or not os.path.exists("test_data_deep.csv"):
-        #divido gli utenti in 70-30 garantendo il bilanciamento della y
+        # divido gli utenti in 70-30 garantendo il bilanciamento della y
         user_classes = df.groupby('user_id')['y'].mean()
-        train_users, test_users = train_test_split(user_classes.index, test_size=0.3, stratify=user_classes)
+
+        force_test_users = config.get('force.test.users').data
+        if force_test_users == '':
+            train_users, test_users = train_test_split(user_classes.index, test_size=0.3, stratify=user_classes)
+        else:
+            force_test_users_value = [int(c) for c in force_test_users.split(',')]
+            test_users = pd.Index(force_test_users_value, name='user_id')
+            train_users = pd.Index(user_classes[~user_classes.index.isin(test_users)].index, name='user_id')
 
         train_data = df[df['user_id'].isin(train_users)]
         test_data = df[df['user_id'].isin(test_users)]
 
-        #elimino feature inutili a mano
+        # elimino feature inutili a mano
         x_train = train_data.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
         y_train = train_data['y']
         x_test = test_data.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
         y_test = test_data['y']
         y_test_user_id = test_data['user_id']
 
-        #faccio da subito la standardizzazione dati così non la faccio più dopo
+        # faccio da subito la standardizzazione dati così non la faccio più dopo
         scaler = StandardScaler()
         x_train_scaled = pd.DataFrame(scaler.fit_transform(x_train), columns=x_train.columns)
         x_test_scaled = pd.DataFrame(scaler.transform(x_test), columns=x_test.columns)
-    
+
         # Feature selection
         feature_selection_algorithm_to_run = config.get('feature.selection').data
 
         selected_train_features = perform_feature_selection_method(x_train_scaled, y_train,
                                                                    feature_selection_algorithm_to_run)
-        #in base alle feature migliori filtro il train e il test e li salvo su csv
+        # in base alle feature migliori filtro il train e il test e li salvo su csv
         train_data = x_train_scaled[selected_train_features.tolist()]
         train_data = train_data.assign(y=y_train.values)
         train_data.to_csv('train_data_deep.csv', index=False)
@@ -143,7 +150,7 @@ def main():
     model.forward_sample(50)
     FINE PROVA pgmpy deep method'''
 
-    #creo la rete bayesiana che descrive il training set e lo salvo su .json
+    # creo la rete bayesiana che descrive il training set e lo salvo su .json
     description_file = 'dataset_description.json'
     if not os.path.exists(description_file):
         epsilon = 0
@@ -161,7 +168,7 @@ def main():
     else:
         print("The dataset_description.json file already exists. No need to run the code.")
 
-    #creo i dati sintetici e li salvo su file .csv
+    # creo i dati sintetici e li salvo su file .csv
     synthetic_data_file = 'synthetic_data.csv'
     if not os.path.exists(synthetic_data_file):
         num_tuples_to_generate = 100000
@@ -172,27 +179,31 @@ def main():
     else:
         print("The synthetic_data.csv file already exists. No need to run the code.")
 
-    #lancio i classificatori, passando i dati sintetici come train set, 
-    #mentre uso il 30 lasciato all'inizio come test set
+    # lancio i classificatori, passando i dati sintetici come train set,
+    # mentre uso il 30 lasciato all'inizio come test set
     df_after_deep = pd.read_csv(synthetic_data_file)
-    x_train_after_deep = df_after_deep.drop(columns=['y'])
-    y_train_after_deep = df_after_deep['y']
 
-    x_test = x_test[selected_train_features.tolist()]
+    # equilibrio i dati sintetici in modo da avere lo stesso numero di elementi per entrambe le classi
+    counts = df_after_deep['y'].value_counts()
+    min_count = counts.min()
+    balanced_sample = df_after_deep.groupby('y').apply(lambda x: x.sample(min_count)).reset_index(drop=True)
+
+    x_train_after_deep = balanced_sample.drop(columns=['y'])
+    y_train_after_deep = balanced_sample['y']
 
     test_data_user_id = test_data.user_id
     test_data = test_data[['y'] + selected_train_features.tolist()]
     df_test = test_data.groupby(test_data_user_id)
 
-    #results_after_deep = run_classifiers_after_deep(x_train_after_deep, y_train_after_deep, df_test)
-    #write_results_to_csv("output_synthetic.csv", results_after_deep, write_classes)
+    results_after_deep = run_classifiers_after_deep(x_train_after_deep, y_train_after_deep, df_test)
+    write_results_to_csv("output_synthetic.csv", results_after_deep, write_classes)
 
-    #lancio i classificatori passando il 70% iniziale come train set
-    #mentre uso il 30 lasciato all'inizio come test set
-    #results_after_deep = run_classifiers_after_deep(x_train, y_train, df_test)
-    #write_results_to_csv("output_no_synthetic.csv", results_after_deep, write_classes)
+    # lancio i classificatori passando il 70% iniziale come train set
+    # mentre uso il 30 lasciato all'inizio come test set
+    results_after_deep = run_classifiers_after_deep(x_train, y_train, df_test)
+    write_results_to_csv("output_no_synthetic.csv", results_after_deep, write_classes)
 
-    #lancio i classificatori senza operazioni di deep learning
+    # lancio i classificatori senza operazioni di deep learning
     users_df = df.groupby(df.user_id)
     # Run classifiers on the combined data
     results = run_classifiers(users_df)

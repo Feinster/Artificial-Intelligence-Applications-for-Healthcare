@@ -2,7 +2,7 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, balanced_accuracy_score
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
 from oversampling import perform_oversampling_method, perform_safe_level_smote, perform_gaussian_mixture_clustering
@@ -11,18 +11,20 @@ import csv
 
 
 # Function to evaluate the classifier
-def evaluate_classifier(clf, x_train, x_test, y_train, y_test):
-    # Train the classifier 
-    #clf.fit(x_train, y_train) #da scommentare per la versione senza deep
+def evaluate_classifier(clf, x_train, x_test, y_train, y_test, do_fit):
+    # Train the classifier
+    if do_fit:
+        clf.fit(x_train, y_train)
 
     # Make predictions
     y_pred = clf.predict(x_test)
 
     # Calculate evaluation metrics
-    accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred)
-    recall = recall_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred)
+    #accuracy = accuracy_score(y_test, y_pred)
+    accuracy = balanced_accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred, average='weighted')
+    recall = recall_score(y_test, y_pred, average='weighted')
+    f1 = f1_score(y_test, y_pred, average='weighted')
 
     # print(f'Modello: {clf}, Accuracy: {accuracy}, Precision:{precision}, Recall:{recall}, F1-score:{f1}')
 
@@ -49,7 +51,7 @@ def run_classifiers(users_df):
         for test_key, test_group in users_df:
 
             train_data = pd.concat([group for key, group in users_df if key != test_key])
-            
+
             if oversampling_algorithm_to_run == '4':
                 train_data = perform_safe_level_smote(train_data, 'y')
 
@@ -71,9 +73,11 @@ def run_classifiers(users_df):
             x_train_scaled, y_train = perform_oversampling_method(x_train_scaled, y_train,
                                                                   oversampling_algorithm_to_run)
 
-            results[clf_name, test_key, y] = evaluate_classifier(clf, x_train_scaled, x_test_scaled, y_train, y_test)
+            results[clf_name, test_key, y] = evaluate_classifier(clf, x_train_scaled, x_test_scaled, y_train, y_test,
+                                                                 True)
 
     return results
+
 
 def run_classifiers_after_deep(x_train, y_train, test_data):
     # Initialize classifiers
@@ -90,14 +94,15 @@ def run_classifiers_after_deep(x_train, y_train, test_data):
         clf.fit(x_train, y_train)
         for test_key, test_group in test_data:
             x_test = test_group.drop(columns=['y'])
-            #test_group.to_csv('test_group_{}_{}.csv'.format(clf_name, test_key), index=False)
+            # test_group.to_csv('test_group_{}_{}.csv'.format(clf_name, test_key), index=False)
             y_test = test_group['y']
             y = y_test.iloc[-1]
             print('Running classifier {}...'.format(clf_name))
             print('test key: {}'.format(test_key))
-            results[clf_name, test_key, y] = evaluate_classifier(clf, x_train, x_test, y_train, y_test)
+            results[clf_name, test_key, y] = evaluate_classifier(clf, x_train, x_test, y_train, y_test, False)
 
     return results
+
 
 def write_results_to_csv(csv_file_path, results, write_classes):
     with open(csv_file_path, 'w', newline='') as csvfile:
