@@ -10,6 +10,9 @@ from DataSynthesizer.DataGenerator import DataGenerator
 from DataSynthesizer.lib.utils import display_bayesian_network
 from sklearn.model_selection import train_test_split
 
+from ydata_synthetic.synthesizers.regular import RegularSynthesizer
+from ydata_synthetic.synthesizers import ModelParameters, TrainParameters
+
 
 def main():
     config = ConfigLoader.get_instance()
@@ -20,8 +23,11 @@ def main():
 
     train_data, test_data, x_train, y_train, x_test, y_test, selected_train_features = prepare_data(df, config)
 
-    create_and_save_bayesian_network()
-    generate_and_save_synthetic_data()
+    # create_and_save_bayesian_network()
+    # generate_and_save_synthetic_data()
+
+    synthetic_data = generate_synthetic_data_with_cgan(train_data, 50000)
+    synthetic_data.to_csv('synthetic_data.csv', index=False)
 
     # lancio i classificatori, passando i dati sintetici come train set,
     # mentre uso il 30 lasciato all'inizio come test set
@@ -204,6 +210,63 @@ def balance_data(df, target_column):
     min_count = counts.min()
     balanced_sample = df.groupby(target_column).apply(lambda x: x.sample(min_count)).reset_index(drop=True)
     return balanced_sample
+
+
+def generate_synthetic_data_with_cgan(train_data, num_samples_per_class):
+    """
+    Generate synthetic data using CGAN for both classes 0 and 1.
+
+    Args:
+        train_data (DataFrame): The training data used to fit the CGAN model.
+        num_samples_per_class (int): Number of synthetic samples to generate per class.
+
+    Returns:
+        DataFrame: A DataFrame containing the generated synthetic data for both classes.
+    """
+    # Assumptions for CGAN training
+    label_cols = ["y"]  # The name of the column representing the class
+    num_cols = train_data.drop(columns=label_cols, errors='ignore').columns.tolist()
+    cat_cols = []  # Update this if you have categorical columns
+
+    batch_size = 500
+    epochs = 500 + 1
+    learning_rate = 2e-4
+    beta_1 = 0.5
+    beta_2 = 0.9
+
+    ctgan_args = ModelParameters(batch_size=batch_size,
+                                 lr=learning_rate,
+                                 betas=(beta_1, beta_2))
+
+    train_args = TrainParameters(epochs=epochs)
+
+    synth = RegularSynthesizer(modelname='ctgan', model_parameters=ctgan_args)
+    synth.fit(data=train_data, train_arguments=train_args, num_cols=num_cols, cat_cols=cat_cols)
+
+    synth.save('ctgan_model.pkl')
+
+    synthetic_data = synth.sample(1000)
+
+    # CGAN Model Parameters
+    # gan_args = ModelParameters(batch_size=128, lr=5e-4, betas=(0.5, 0.9), noise_dim=32, layers_dim=128)
+    # train_args = TrainParameters(epochs=100, label_dim=1, labels=(0, 1))
+
+    # Initialize CGAN
+    # synth = RegularSynthesizer(modelname='cgan', model_parameters=gan_args)
+    # synth.fit(data=train_data, label_cols=label_cols, train_arguments=train_args, num_cols=num_cols, cat_cols=cat_cols)
+
+    # Generate synthetic data for class 0
+    # cond_array_0 = pd.DataFrame(num_samples_per_class * [0], columns=label_cols)
+    # synthetic_data_0 = synth.sample(cond_array_0)
+
+    # Generate synthetic data for class 1
+    # cond_array_1 = pd.DataFrame(num_samples_per_class * [1], columns=label_cols)
+    # synthetic_data_1 = synth.sample(cond_array_1)
+
+    # Combine the synthetic data from both classes
+    # synthetic_data = pd.concat([synthetic_data_0, synthetic_data_1], ignore_index=True)
+
+    return synthetic_data
 
 
 if __name__ == "__main__":

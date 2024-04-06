@@ -1,7 +1,7 @@
 from imblearn.over_sampling import RandomOverSampler, SMOTE, BorderlineSMOTE, ADASYN, KMeansSMOTE
 from crucio import SLS
 from sklearn.cluster import MiniBatchKMeans, DBSCAN
-from clover.over_sampling import ClusterOverSampler
+#from clover.over_sampling import ClusterOverSampler
 from sklearn.mixture import GaussianMixture
 
 ROS = '1'
@@ -55,9 +55,10 @@ def perform_kmeans_smote(x, y, kmeans_estimator=None, n_clusters=5, cluster_bala
 
 
 def perform_dbscan_bsmote(x, y):
-    dbscan_bsmote = ClusterOverSampler(oversampler=BorderlineSMOTE(random_state=5), clusterer=DBSCAN())
-    x_resampled, y_resampled = dbscan_bsmote.fit_resample(x, y)
-    return x_resampled, y_resampled
+    #dbscan_bsmote = ClusterOverSampler(oversampler=BorderlineSMOTE(random_state=5), clusterer=DBSCAN())
+    #x_resampled, y_resampled = dbscan_bsmote.fit_resample(x, y)
+    #funziona solo con py 12
+    return x, y
 
 
 def perform_gaussian_mixture_clustering(x, n_components=2, random_state=0):
