@@ -165,3 +165,6 @@ user_*/
 *.bak
 *.pkl
 *.zip
+/cache
+/summaries
+*.html

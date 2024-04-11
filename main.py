@@ -5,35 +5,39 @@ from classifiers import run_classifiers, run_classifiers_after_deep, write_resul
 from feature_selection import perform_feature_selection_method
 from config_loader import ConfigLoader
 from sklearn.preprocessing import StandardScaler
-from DataSynthesizer.DataDescriber import DataDescriber
-from DataSynthesizer.DataGenerator import DataGenerator
-from DataSynthesizer.lib.utils import display_bayesian_network
 from sklearn.model_selection import train_test_split
-
-from ydata_synthetic.synthesizers.regular import RegularSynthesizer
-from ydata_synthetic.synthesizers import ModelParameters, TrainParameters
+from sdv.metadata import SingleTableMetadata
+from sdv.evaluation.single_table import get_column_plot
+from sdv.evaluation.single_table import evaluate_quality
+from oversampling import perform_oversampling_deep_method
+import plotly.io as pio
 
 
 def main():
     config = ConfigLoader.get_instance()
     write_class_value = config.get('write.class').data
     write_classes = [int(c) for c in write_class_value.split(',')]
+    oversampling_deep_algorithm_to_run = config.get('oversampling.deep.algorithm').data
 
     df = check_and_process_combined_features()
 
     train_data, test_data, x_train, y_train, x_test, y_test, selected_train_features = prepare_data(df, config)
 
-    # create_and_save_bayesian_network()
-    # generate_and_save_synthetic_data()
+    if oversampling_deep_algorithm_to_run != '0':
+        perform_oversampling_deep_method(train_data, oversampling_deep_algorithm_to_run)
 
-    synthetic_data = generate_synthetic_data_with_cgan(train_data, 50000)
-    synthetic_data.to_csv('synthetic_data.csv', index=False)
+    df_after_deep = pd.read_csv('synthetic_data.csv')
+    for column in train_data.columns:
+        if column != 'y':
+            plot_feature_comparison(train_data, df_after_deep, column)
+
+    evaluate_and_save_quality_details(train_data, df_after_deep)
+
+    # bilancio i dati sintetici se non lo fossero già
+    balanced_sample = balance_data(df_after_deep, 'y')
 
     # lancio i classificatori, passando i dati sintetici come train set,
     # mentre uso il 30 lasciato all'inizio come test set
-    df_after_deep = pd.read_csv('synthetic_data.csv')
-    balanced_sample = balance_data(df_after_deep, 'y')
-
     x_train_after_deep = balanced_sample.drop(columns=['y'])
     y_train_after_deep = balanced_sample['y']
 
@@ -171,37 +175,6 @@ def prepare_data(df, config, train_data_path="train_data_deep.csv", test_data_pa
     return train_data, test_data, x_train, y_train, x_test, y_test, selected_train_features
 
 
-def create_and_save_bayesian_network(description_file='dataset_description.json',
-                                     dataset_file='train_data_deep.csv',
-                                     epsilon=0, degree_of_bayesian_network=2):
-    if not os.path.exists(description_file):
-        describer = DataDescriber()
-        # Describe the dataset to create a Bayesian network
-        describer.describe_dataset_in_correlated_attribute_mode(dataset_file=dataset_file,
-                                                                epsilon=epsilon,
-                                                                k=degree_of_bayesian_network)
-        # Save dataset description to a JSON file
-        describer.save_dataset_description_to_file(description_file)
-        print("Bayesian network description saved.")
-        # Optionally display the Bayesian network
-        # display_bayesian_network(describer.bayesian_network)
-    else:
-        print(f"The {description_file} file already exists. No need to run the code.")
-
-
-def generate_and_save_synthetic_data(synthetic_data_file='synthetic_data.csv',
-                                     description_file='dataset_description.json',
-                                     num_tuples_to_generate=100000):
-    if not os.path.exists(synthetic_data_file):
-        generator = DataGenerator()
-        generator.generate_dataset_in_correlated_attribute_mode(num_tuples_to_generate, description_file)
-        # Save synthetic data to a CSV file
-        generator.save_synthetic_data(synthetic_data_file)
-        print("Synthetic data generated and saved.")
-    else:
-        print(f"The {synthetic_data_file} file already exists. No need to run the code.")
-
-
 def balance_data(df, target_column):
     """
     Balances the dataset to have an equal number of samples for each class.
@@ -209,64 +182,39 @@ def balance_data(df, target_column):
     counts = df[target_column].value_counts()
     min_count = counts.min()
     balanced_sample = df.groupby(target_column).apply(lambda x: x.sample(min_count)).reset_index(drop=True)
-    return balanced_sample
+    shuffled_balanced_sample = balanced_sample.sample(frac=1).reset_index(drop=True)
+    return shuffled_balanced_sample
 
 
-def generate_synthetic_data_with_cgan(train_data, num_samples_per_class):
-    """
-    Generate synthetic data using CGAN for both classes 0 and 1.
+def plot_feature_comparison(real_data, synthetic_data, feature_name, output_path="./iframe_figures/"):
+    metadata = SingleTableMetadata()
+    metadata.detect_from_dataframe(real_data)
 
-    Args:
-        train_data (DataFrame): The training data used to fit the CGAN model.
-        num_samples_per_class (int): Number of synthetic samples to generate per class.
+    fig = get_column_plot(
+        real_data=real_data,
+        synthetic_data=synthetic_data,
+        metadata=metadata,
+        column_name=feature_name
+    )
 
-    Returns:
-        DataFrame: A DataFrame containing the generated synthetic data for both classes.
-    """
-    # Assumptions for CGAN training
-    label_cols = ["y"]  # The name of the column representing the class
-    num_cols = train_data.drop(columns=label_cols, errors='ignore').columns.tolist()
-    cat_cols = []  # Update this if you have categorical columns
+    filename = f"{output_path}{feature_name}_comparison_plot.html"
+    pio.write_html(fig, file=filename)
 
-    batch_size = 500
-    epochs = 500 + 1
-    learning_rate = 2e-4
-    beta_1 = 0.5
-    beta_2 = 0.9
 
-    ctgan_args = ModelParameters(batch_size=batch_size,
-                                 lr=learning_rate,
-                                 betas=(beta_1, beta_2))
+def evaluate_and_save_quality_details(real_data, synthetic_data):
+    metadata = SingleTableMetadata()
+    metadata.detect_from_dataframe(real_data)
 
-    train_args = TrainParameters(epochs=epochs)
+    quality_report = evaluate_quality(
+        real_data=real_data,
+        synthetic_data=synthetic_data,
+        metadata=metadata)
 
-    synth = RegularSynthesizer(modelname='ctgan', model_parameters=ctgan_args)
-    synth.fit(data=train_data, train_arguments=train_args, num_cols=num_cols, cat_cols=cat_cols)
+    shapes_details = quality_report.get_details(property_name='Column Shapes')
+    trends_details = quality_report.get_details(property_name='Column Pair Trends')
 
-    synth.save('ctgan_model.pkl')
-
-    synthetic_data = synth.sample(1000)
-
-    # CGAN Model Parameters
-    # gan_args = ModelParameters(batch_size=128, lr=5e-4, betas=(0.5, 0.9), noise_dim=32, layers_dim=128)
-    # train_args = TrainParameters(epochs=100, label_dim=1, labels=(0, 1))
-
-    # Initialize CGAN
-    # synth = RegularSynthesizer(modelname='cgan', model_parameters=gan_args)
-    # synth.fit(data=train_data, label_cols=label_cols, train_arguments=train_args, num_cols=num_cols, cat_cols=cat_cols)
-
-    # Generate synthetic data for class 0
-    # cond_array_0 = pd.DataFrame(num_samples_per_class * [0], columns=label_cols)
-    # synthetic_data_0 = synth.sample(cond_array_0)
-
-    # Generate synthetic data for class 1
-    # cond_array_1 = pd.DataFrame(num_samples_per_class * [1], columns=label_cols)
-    # synthetic_data_1 = synth.sample(cond_array_1)
-
-    # Combine the synthetic data from both classes
-    # synthetic_data = pd.concat([synthetic_data_0, synthetic_data_1], ignore_index=True)
-
-    return synthetic_data
+    shapes_details.to_csv('column_shapes_details.csv', index=False)
+    trends_details.to_csv('column_pair_trends_details.csv', index=False)
 
 
 if __name__ == "__main__":
