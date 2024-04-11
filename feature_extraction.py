@@ -1,12 +1,27 @@
-from datetime import datetime
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy, skew, kurtosis
 import os
 
 
-# Define a function to extract features from actigraphy data
 def extract_actigraphy_features(actigraphy_data):
+    """
+    Extracts detailed features from actigraphy data for each minute, including activity counts on three axes,
+    step count, heart rate, inclinometer positions, and vector magnitude. S
+    Statistical summaries are computed for each minute across all the specified features.
+
+    Parameters
+    ----------
+    actigraphy_data : DataFrame
+        A pandas DataFrame containing the actigraphy data with columns for day, time, and various sensor
+        readings like Axis1, Axis2, Axis3, Steps, HR (Heart Rate), inclinometer statuses, and vector magnitude.
+
+    Returns
+    -------
+    features_per_minute : dict
+        A dictionary keyed by (day, hour, minute) tuples, containing summarized statistics (mean, std, entropy, etc.)
+        for each minute across various sensor features.
+    """
     # Initialize a dictionary to store features per minute
     minute_features = {}
 
@@ -70,8 +85,29 @@ def extract_actigraphy_features(actigraphy_data):
     return features_per_minute
 
 
-# Define a function to extract features from RR data
 def extract_rr_features(rr_data):
+    """
+    Extracts and computes statistical features from RR data for each minute.
+    The features include mean, median, variance, standard deviation, entropy, skewness, kurtosis, interquartile range,
+    and mean absolute deviation of the interbeat intervals.
+
+    Parameters
+    ----------
+    rr_data : DataFrame
+        A pandas DataFrame containing RR data with columns for day, time, and interbeat intervals ('ibi_s').
+
+    Returns
+    -------
+    features_per_minute : dict
+        A dictionary keyed by (day, hour, minute) tuples, containing the calculated statistical features for
+        the 'ibi_s' values for each minute. The dictionary includes entries for mean, median, variance,
+        standard deviation, entropy, skewness, kurtosis, interquartile range, and mean absolute deviation.
+
+    Notes
+    -----
+    This function iterates through each row of the RR data, grouping the data by minute based on the 'day', 'hour',
+    and 'minute' extracted from the timestamp. It calculates several statistics for the interbeat intervals for each minute.
+    """
     # Initialize a dictionary to store features per minute
     minute_features = {}
 
@@ -115,8 +151,32 @@ def extract_rr_features(rr_data):
     return features_per_minute
 
 
-# Define a function to filter data by sleep intervals
 def filter_data_by_sleep_intervals(user_folder, current_directory):
+    """
+    Filters actigraphy and RR data based on sleep intervals defined in a user-specific sleep data file.
+    This method ensures that only data falling within these defined sleep periods are considered in subsequent analysis.
+
+    Parameters
+    ----------
+    user_folder : str
+        The folder name for the user whose data is being analyzed. This folder is expected to contain the relevant CSV files.
+    current_directory : str
+        The path to the directory where the user's folder is located.
+
+    Returns
+    -------
+    filtered_actigraphy_data : DataFrame
+        Actigraphy data filtered to include only entries that fall within the sleep periods specified in the user's sleep data.
+    filtered_rr_data : DataFrame
+        RR data filtered in the same way, including only the entries within the defined sleep periods.
+
+    Notes
+    -----
+    The function reads 'sleep.csv', 'Actigraph.csv', and 'RR.csv' from the specified user folder.
+    It processes each sleep interval to extract relevant portions of actigraphy and RR data,
+    ensuring the data corresponds strictly to periods where the user was reported to be in bed.
+    Data from periods that span midnight are handled to ensure continuity and accuracy.
+    """
     # Load sleep data from the sleep.csv file to obtain sleep intervals for this user
     sleep_data = pd.read_csv(os.path.join(current_directory, user_folder, "sleep.csv"))
 

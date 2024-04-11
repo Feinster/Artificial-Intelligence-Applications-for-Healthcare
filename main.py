@@ -61,6 +61,14 @@ def main():
 
 
 def check_and_process_combined_features():
+    """
+    Processes combined features and applying necessary transformations.
+
+    Returns
+    -------
+    DataFrame
+        A pandas DataFrame that has been processed and is ready for further analysis.
+    """
     # Check if the combined_features.csv file exists in the current directory
     if not os.path.exists("combined_features.csv"):
         print("Processing features...")
@@ -71,6 +79,25 @@ def check_and_process_combined_features():
 
 
 def process_user_folders():
+    """
+    Processes user folders in the current directory, extracts features from actigraphy and RR data, and combines these
+    features into a single CSV file.
+
+    This function loops through each folder that starts with "user_" in the current working directory, extracts
+    user-specific questionnaire data, filters actigraphy and RR data based on sleep intervals, extracts relevant features,
+    and combines them into a comprehensive DataFrame.
+
+    Returns
+    -------
+    DataFrame
+        A pandas DataFrame containing combined features from actigraphy and RR data for each minute where both sets
+        of data are available. The DataFrame is also written to 'combined_features.csv' in the current directory.
+
+    Side Effects
+    ------------
+    1. Writes a CSV file 'combined_features.csv' in the current working directory containing the combined features
+    for all users processed.
+    """
     current_directory = os.getcwd()
     all_combined_features = []  # List to store combined features for all users
 
@@ -119,6 +146,21 @@ def process_user_folders():
 
 
 def prepare_data(df, config, train_data_path="train_data_deep.csv", test_data_path="test_data_deep.csv"):
+    """
+    Prepares the data for model training by splitting into training and test datasets and applying feature selection.
+
+    Parameters
+    ----------
+    df : DataFrame
+        The DataFrame to process.
+    config : ConfigLoader
+        The configuration settings loaded via ConfigLoader.
+
+    Returns
+    -------
+    tuple
+        A tuple containing training data, test data, training feature matrix, training labels, test feature matrix, test labels, and selected features.
+    """
     if not os.path.exists(train_data_path) or not os.path.exists(test_data_path):
         # Split users into 70-30 ensuring balance of y
         user_classes = df.groupby('user_id')['y'].mean()
@@ -177,7 +219,19 @@ def prepare_data(df, config, train_data_path="train_data_deep.csv", test_data_pa
 
 def balance_data(df, target_column):
     """
-    Balances the dataset to have an equal number of samples for each class.
+    Balances the dataset to have an equal number of samples for each class in the specified target column.
+
+    Parameters
+    ----------
+    df : DataFrame
+        The pandas DataFrame to balance.
+    target_column : str
+        The name of the column in df that contains the class labels.
+
+    Returns
+    -------
+    DataFrame
+        A balanced DataFrame where each class has the same number of samples.
     """
     counts = df[target_column].value_counts()
     min_count = counts.min()
@@ -187,6 +241,25 @@ def balance_data(df, target_column):
 
 
 def plot_feature_comparison(real_data, synthetic_data, feature_name, output_path="./iframe_figures/"):
+    """
+    Generates a comparison plot for a specific feature between real and synthetic data sets, and saves it as an HTML file.
+
+    Parameters
+    ----------
+    real_data : DataFrame
+        The pandas DataFrame containing the real data.
+    synthetic_data : DataFrame
+        The pandas DataFrame containing the synthetic data.
+    feature_name : str
+        The name of the feature to compare.
+    output_path : str, optional
+        The file path where the output HTML file will be saved. Default is "./iframe_figures/".
+
+    Returns
+    -------
+    None
+        The function saves the plot as an HTML file and does not return any value.
+    """
     metadata = SingleTableMetadata()
     metadata.detect_from_dataframe(real_data)
 
@@ -202,6 +275,21 @@ def plot_feature_comparison(real_data, synthetic_data, feature_name, output_path
 
 
 def evaluate_and_save_quality_details(real_data, synthetic_data):
+    """
+    Evaluates the quality of synthetic data compared to real data using statistical metrics and saves the details to CSV files.
+
+    Parameters
+    ----------
+    real_data : DataFrame
+        The pandas DataFrame containing the real data.
+    synthetic_data : DataFrame
+        The pandas DataFrame containing the synthetic data.
+
+    Returns
+    -------
+    None
+        The function saves the evaluation details as CSV files and does not return any value.
+    """
     metadata = SingleTableMetadata()
     metadata.detect_from_dataframe(real_data)
 

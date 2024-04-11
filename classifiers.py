@@ -10,8 +10,30 @@ from config_loader import ConfigLoader
 import csv
 
 
-# Function to evaluate the classifier
 def evaluate_classifier(clf, x_train, x_test, y_train, y_test, do_fit):
+    """
+    Evaluates a classifier on given training and test datasets and calculates performance metrics.
+
+    Parameters
+    ----------
+    clf : Classifier
+        The classifier instance to evaluate.
+    x_train : DataFrame
+        The training feature dataset.
+    x_test : DataFrame
+        The test feature dataset.
+    y_train : Series
+        The training labels.
+    y_test : Series
+        The test labels.
+    do_fit : bool
+        Flag to determine whether to fit the classifier with training data before prediction.
+
+    Returns
+    -------
+    tuple
+        A tuple containing balanced accuracy, precision, recall, and F1 score of the classifier.
+    """
     # Train the classifier
     if do_fit:
         clf.fit(x_train, y_train)
@@ -31,8 +53,21 @@ def evaluate_classifier(clf, x_train, x_test, y_train, y_test, do_fit):
     return accuracy, precision, recall, f1
 
 
-# Function to run classifiers
 def run_classifiers(users_df):
+    """
+    Runs multiple classifiers on a dataset, applying oversampling methods and evaluating each classifier's performance.
+
+    Parameters
+    ----------
+    users_df : dict
+        A dictionary grouping data by user, where each key is a user identifier and the value is their respective data.
+
+    Returns
+    -------
+    dict
+        A dictionary containing evaluation results for each classifier and user, indexed by classifier name,
+        test group key, and last class label.
+    """
     config = ConfigLoader.get_instance()
     oversampling_algorithm_to_run = config.get('oversampling.algorithm').data
 
@@ -80,6 +115,24 @@ def run_classifiers(users_df):
 
 
 def run_classifiers_after_deep(x_train, y_train, test_data):
+    """
+    Evaluates multiple classifiers on test data after training with a common set of training data,
+    after deep learning pre-processing for oversampling.
+
+    Parameters
+    ----------
+    x_train : DataFrame
+        The training feature dataset.
+    y_train : Series
+        The training labels.
+    test_data : dict
+        A dictionary grouping test data by some criteria, typically after some form of data transformation or augmentation.
+
+    Returns
+    -------
+    dict
+        A dictionary containing evaluation results for each classifier and test group, indexed by classifier name, test group key, and last class label.
+    """
     # Initialize classifiers
     classifiers = {
         'AdaBoost': AdaBoostClassifier(algorithm='SAMME'),
@@ -105,6 +158,22 @@ def run_classifiers_after_deep(x_train, y_train, test_data):
 
 
 def write_results_to_csv(csv_file_path, results, write_classes):
+    """
+    Writes the results of classifier evaluations to a CSV file.
+
+    Parameters
+    ----------
+    csv_file_path : str
+        The path to the CSV file where results will be saved.
+    results : dict
+        A dictionary containing evaluation metrics for each classifier, indexed by model name, user ID, and class label.
+    write_classes : list
+        A list of class labels to include in the CSV.
+
+    Side Effects
+    ------------
+    Writes to a CSV file specified by `csv_file_path`.
+    """
     with open(csv_file_path, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile)
 
