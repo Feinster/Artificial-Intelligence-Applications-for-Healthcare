@@ -14,6 +14,8 @@ from sdv.metadata import SingleTableMetadata
 import os
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+from openai import OpenAI
+from dotenv import load_dotenv
 
 ROS = '1'
 SMOTE_METHOD = '2'
@@ -362,7 +364,7 @@ def generate_and_save_synthetic_data_with_bayesian_network(synthetic_data_file='
     print("Synthetic data generated and saved.")
 
 
-def generate_and_save_synthetic_data_with_ctgan(train_data):
+def generate_and_save_synthetic_data_with_ctgan(train_data, num_tuples_to_generate):
     """
     Generates synthetic data using the CTGAN model (Conditional Tabular Generative Adversarial Network)
     and saves this data to a CSV file.
@@ -372,6 +374,8 @@ def generate_and_save_synthetic_data_with_ctgan(train_data):
     ----------
     train_data : DataFrame
         The training dataset used to train the CTGAN model. It should include both numerical and categorical features.
+    num_tuples_to_generate : int
+        Number of tuples to generate.
 
     Notes
     -----
@@ -409,7 +413,7 @@ def generate_and_save_synthetic_data_with_ctgan(train_data):
     else:
         synth = RegularSynthesizer.load(model_file_path)
 
-    synthetic_data = synth.sample(100000)
+    synthetic_data = synth.sample(num_tuples_to_generate)
     synthetic_data.to_csv('synthetic_data.csv', index=False)
     print("Synthetic data generated and saved.")
 
@@ -468,7 +472,7 @@ def generate_and_save_synthetic_data_with_cgan(train_data, num_samples_per_class
     print("Synthetic data generated and saved.")
 
 
-def generate_and_save_synthetic_data_with_wgan(train_data):
+def generate_and_save_synthetic_data_with_wgan(train_data, num_samples_per_class):
     """
     Generates synthetic data using the WGAN model (Wasserstein Generative Adversarial Network) for each class label
     and saves this data to a CSV file after scaling.
@@ -480,6 +484,8 @@ def generate_and_save_synthetic_data_with_wgan(train_data):
     train_data : DataFrame
         The training dataset used to train the WGAN model, which should include the target class column 'y'
         and any other features.
+    num_samples_per_class : int
+        The number of synthetic samples to generate for each class.
 
     Notes
     -----
@@ -532,7 +538,7 @@ def generate_and_save_synthetic_data_with_wgan(train_data):
             synth = RegularSynthesizer.load(model_file_path)
 
         # Sample synthetic data using the trained model for the current y_value
-        synthetic_data = synth.sample(50000)
+        synthetic_data = synth.sample(num_samples_per_class)
         synthetic_data_list.append(synthetic_data)
 
     # Merge the synthetic data from both classes
@@ -548,7 +554,7 @@ def generate_and_save_synthetic_data_with_wgan(train_data):
     print("Synthetic data generated and saved.")
 
 
-def generate_and_save_synthetic_data_with_TVAE(train_data):
+def generate_and_save_synthetic_data_with_TVAE(train_data, num_tuples_to_generate):
     """
     Generates synthetic data using the TVAE model (Tabular Variational Autoencoder) and saves this data to a CSV file.
     The method initializes and trains a TVAE model if one does not already exist, then uses it to generate a
@@ -558,6 +564,8 @@ def generate_and_save_synthetic_data_with_TVAE(train_data):
     ----------
     train_data : DataFrame
         The training dataset used to train the TVAE model, which should include both numerical and categorical features.
+    num_tuples_to_generate : int
+        Number of tuples to generate.
 
     Notes
     -----
@@ -586,12 +594,12 @@ def generate_and_save_synthetic_data_with_TVAE(train_data):
             filepath=model_file_path
         )
 
-    synthetic_data = synthesizer.sample(num_rows=100000)
+    synthetic_data = synthesizer.sample(num_rows=num_tuples_to_generate)
     synthetic_data.to_csv('synthetic_data.csv', index=False)
     print("Synthetic data generated and saved.")
 
 
-def generate_and_save_synthetic_data_with_CopulaGAN(train_data):
+def generate_and_save_synthetic_data_with_CopulaGAN(train_data, num_tuples_to_generate):
     """
     Generates synthetic data using the CopulaGAN model (Copula Generative Adversarial Network) and saves this
     data to a CSV file.
@@ -603,6 +611,8 @@ def generate_and_save_synthetic_data_with_CopulaGAN(train_data):
     train_data : DataFrame
         The training dataset used to train the CopulaGAN model. This dataset should include both numerical
         and categorical features.
+    num_tuples_to_generate : int
+        Number of tuples to generate.
 
     Notes
     -----
@@ -631,12 +641,38 @@ def generate_and_save_synthetic_data_with_CopulaGAN(train_data):
             filepath=model_file_path
         )
 
-    synthetic_data = synthesizer.sample(num_rows=100000)
+    synthetic_data = synthesizer.sample(num_rows=num_tuples_to_generate)
     synthetic_data.to_csv('synthetic_data.csv', index=False)
     print("Synthetic data generated and saved.")
 
 
-def perform_oversampling_deep_method(train_data, method_index):
+def generate_block_of_synthetic_data(df):
+    load_dotenv()
+    client = OpenAI()
+
+    json_data = df.to_json(orient='split')
+
+    prompt_text = (f"Genera un dataframe di 100 righe di dati sintetici, bilanciati tra le classi 0 e 1 "
+                   f"per la variabile target 'y', includendo tutte le colonne originali. Base del dataframe: {json_data}")
+
+    response = client.chat.completions.create(
+        messages=[
+            {
+                "role": "user",
+                "content": prompt_text,
+            }
+        ],
+        model="gpt-3.5-turbo",
+    )
+
+    generated_text = response.choices[0].text.strip()
+
+    synthetic_df = pd.read_json(generated_text, orient='split')
+
+    return synthetic_df
+
+
+def perform_oversampling_deep_method(train_data, method_index, num_tuples_to_generate):
     """
     Selects and executes a specified synthetic data generation method based on the provided method index.
     This method serves as a dispatcher that calls various data synthesizing functions.
@@ -649,6 +685,8 @@ def perform_oversampling_deep_method(train_data, method_index):
     method_index : str
         The index of the synthetic data generation method to use. This corresponds to predefined constants representing
         different synthetic methods, such as BAYESIAN_NETWORK, CTGAN, WGAN, TVAE, COPULA_GAN, and CGAN.
+    num_tuples_to_generate : int
+        Number of tuples to generate.
 
     Raises
     ------
@@ -671,17 +709,16 @@ def perform_oversampling_deep_method(train_data, method_index):
     model and parameters.
     """
     if method_index == BAYESIAN_NETWORK:
-        generate_and_save_synthetic_data_with_bayesian_network()
+        generate_and_save_synthetic_data_with_bayesian_network(num_tuples_to_generate=num_tuples_to_generate)
     elif method_index == CTGAN:
-        generate_and_save_synthetic_data_with_ctgan(train_data)
+        generate_and_save_synthetic_data_with_ctgan(train_data, num_tuples_to_generate)
     elif method_index == WGAN:
-        generate_and_save_synthetic_data_with_wgan(train_data)
+        generate_and_save_synthetic_data_with_wgan(train_data, num_tuples_to_generate / 2)
     elif method_index == TVAE:
-        generate_and_save_synthetic_data_with_TVAE(train_data)
+        generate_and_save_synthetic_data_with_TVAE(train_data, num_tuples_to_generate)
     elif method_index == COPULA_GAN:
-        generate_and_save_synthetic_data_with_CopulaGAN(train_data)
+        generate_and_save_synthetic_data_with_CopulaGAN(train_data, num_tuples_to_generate)
     elif method_index == CGAN:
-        generate_and_save_synthetic_data_with_cgan(train_data)
+        generate_and_save_synthetic_data_with_cgan(train_data, num_tuples_to_generate / 2)
     else:
         raise Exception("No method found!!!")
-

@@ -18,20 +18,22 @@ def main():
     write_class_value = config.get('write.class').data
     write_classes = [int(c) for c in write_class_value.split(',')]
     oversampling_deep_algorithm_to_run = config.get('oversampling.deep.algorithm').data
+    num_tuples_to_generate = int(config.get('num.tuples.to.generate').data)
 
     df = check_and_process_combined_features()
 
-    train_data, test_data, x_train, y_train, x_test, y_test, selected_train_features = prepare_data(df, config)
+    train_data_for_deep, test_data, x_train, y_train, x_test, y_test, selected_train_features = prepare_data(df, config)
 
     if oversampling_deep_algorithm_to_run != '0':
-        perform_oversampling_deep_method(train_data, oversampling_deep_algorithm_to_run)
+        perform_oversampling_deep_method(train_data_for_deep, oversampling_deep_algorithm_to_run,
+                                         num_tuples_to_generate)
 
     df_after_deep = pd.read_csv('synthetic_data.csv')
-    for column in train_data.columns:
+    for column in train_data_for_deep.columns:
         if column != 'y':
-            plot_feature_comparison(train_data, df_after_deep, column)
+            plot_feature_comparison(train_data_for_deep, df_after_deep, column)
 
-    evaluate_and_save_quality_details(train_data, df_after_deep)
+    evaluate_and_save_quality_details(train_data_for_deep, df_after_deep)
 
     # bilancio i dati sintetici se non lo fossero già
     balanced_sample = balance_data(df_after_deep, 'y')
@@ -260,6 +262,9 @@ def plot_feature_comparison(real_data, synthetic_data, feature_name, output_path
     None
         The function saves the plot as an HTML file and does not return any value.
     """
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
     metadata = SingleTableMetadata()
     metadata.detect_from_dataframe(real_data)
 
