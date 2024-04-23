@@ -118,10 +118,10 @@ def extract_rr_features(rr_data):
         time = row['time']
 
         # Extract hour and minute from the timestamp
-        hour, minute, _ = map(int, time.split(':'))
+        hour, minute, _ = time.split(':')
 
         # Create a unique key for each minute (day, hour, minute)
-        key = (day, hour, minute)
+        key = tuple(map(int, (day, hour, minute)))
 
         # If this key doesn't exist already, create a list for it
         if key not in minute_features:

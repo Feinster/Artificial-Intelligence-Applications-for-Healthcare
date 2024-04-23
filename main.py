@@ -1,7 +1,8 @@
 import os
 import pandas as pd
 from feature_extraction import extract_actigraphy_features, extract_rr_features, filter_data_by_sleep_intervals
-from classifiers import run_classifiers, run_classifiers_after_deep, write_results_to_csv
+from classifiers import run_classifiers, run_classifiers_after_deep, write_results_to_csv, run_regressors_after_deep, \
+    write_results_to_csv_regressor
 from feature_selection import perform_feature_selection_method
 from config_loader import ConfigLoader
 from sklearn.preprocessing import StandardScaler
@@ -9,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from sdv.metadata import SingleTableMetadata
 from sdv.evaluation.single_table import get_column_plot
 from sdv.evaluation.single_table import evaluate_quality
-from oversampling import perform_oversampling_deep_method
+from oversampling import perform_oversampling_deep_method, get_deep_model_name, get_basic_method_name
 import plotly.io as pio
 
 
@@ -18,6 +19,7 @@ def main():
     write_class_value = config.get('write.class').data
     write_classes = [int(c) for c in write_class_value.split(',')]
     oversampling_deep_algorithm_to_run = config.get('oversampling.deep.algorithm').data
+    oversampling_algorithm_to_run = config.get('oversampling.algorithm').data
     num_tuples_to_generate = int(config.get('num.tuples.to.generate').data)
 
     df = check_and_process_combined_features()
@@ -31,7 +33,8 @@ def main():
     df_after_deep = pd.read_csv('synthetic_data.csv')
     for column in train_data_for_deep.columns:
         if column != 'y':
-            plot_feature_comparison(train_data_for_deep, df_after_deep, column)
+            pass
+            # plot_feature_comparison(train_data_for_deep, df_after_deep, column)
 
     evaluate_and_save_quality_details(train_data_for_deep, df_after_deep)
 
@@ -47,19 +50,30 @@ def main():
     test_data = test_data[['y'] + selected_train_features.tolist()]
     df_test = test_data.groupby(test_data_user_id)
 
+    '''
+    #regression
+    results_after_deep = run_regressors_after_deep(x_train_after_deep, y_train_after_deep, df_test)
+    write_results_to_csv_regressor("output_synthetic.csv", results_after_deep, write_classes)
+
+    results_after_deep = run_regressors_after_deep(x_train, y_train, df_test)
+    write_results_to_csv_regressor("output_no_synthetic.csv", results_after_deep, write_classes)
+    '''
     results_after_deep = run_classifiers_after_deep(x_train_after_deep, y_train_after_deep, df_test)
-    write_results_to_csv("output_synthetic.csv", results_after_deep, write_classes)
+    write_results_to_csv(f"output_synthetic_{get_deep_model_name(oversampling_deep_algorithm_to_run)}.csv",
+                         results_after_deep, write_classes)
 
     # lancio i classificatori passando il 70% iniziale come train set
     # mentre uso il 30 lasciato all'inizio come test set
     results_after_deep = run_classifiers_after_deep(x_train, y_train, df_test)
-    write_results_to_csv("output_no_synthetic.csv", results_after_deep, write_classes)
+    write_results_to_csv(f"output_no_synthetic_{get_deep_model_name(oversampling_deep_algorithm_to_run)}.csv",
+                         results_after_deep, write_classes)
 
     # lancio i classificatori senza operazioni di deep learning
     users_df = df.groupby(df.user_id)
     # Run classifiers on the combined data
     results = run_classifiers(users_df)
-    write_results_to_csv("output_basic_oversampled.csv", results, write_classes)
+    write_results_to_csv(f"output_basic_oversampled_{get_basic_method_name(oversampling_deep_algorithm_to_run)}.csv",
+                         results, write_classes)
 
 
 def check_and_process_combined_features():
@@ -113,7 +127,10 @@ def process_user_folders():
             questionnaire_data = pd.read_csv(os.path.join(current_directory, user_folder, "questionnaire.csv"))
 
             # Encode labels based on PSQI score
-            y = (questionnaire_data['Pittsburgh'] <= 5).astype(int).to_string(index=False)
+            if True:
+                y = (questionnaire_data['Pittsburgh'] <= 5).astype(int).to_string(index=False)
+            else:
+                y = questionnaire_data['Daily_stress']
 
             # Filter actigraphy and RR data by sleep intervals
             filtered_actigraphy_data, filtered_rr_data = filter_data_by_sleep_intervals(user_folder,
@@ -208,13 +225,14 @@ def prepare_data(df, config, train_data_path="train_data_deep.csv", test_data_pa
         print("The train and test data files already exist. No need to run the code again.")
         train_data = pd.read_csv(train_data_path)
         test_data = pd.read_csv(test_data_path)
-        x_train = train_data.drop(columns=['y'])
-        y_train = train_data['y']
-        x_test = test_data.drop(columns=['user_id', 'y'])
-        y_test = test_data['y']
 
-        selected_train_features = pd.read_csv(train_data_path, usecols=lambda column: column != 'y', nrows=0)
-        selected_train_features = selected_train_features.columns
+    x_train = train_data.drop(columns=['y'])
+    y_train = train_data['y']
+    x_test = test_data.drop(columns=['user_id', 'y'])
+    y_test = test_data['y']
+
+    selected_train_features = pd.read_csv(train_data_path, usecols=lambda column: column != 'y', nrows=0)
+    selected_train_features = selected_train_features.columns
 
     return train_data, test_data, x_train, y_train, x_test, y_test, selected_train_features
 

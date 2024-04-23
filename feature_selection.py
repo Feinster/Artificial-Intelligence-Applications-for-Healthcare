@@ -146,19 +146,12 @@ def perform_feature_selection_method(x, y, method_index):
     y : array-like
         Target variable dataset, required by all methods except the variance threshold method.
     method_index : str
-        The index of the feature selection method to use. The index should correspond to predefined constants
-        that represent different feature selection methods.
+        The index of the feature selection method to use.
 
     Returns
     -------
     selected_features : Index
         The names of the selected features as determined by the chosen feature selection method.
-
-    Raises
-    ------
-    Exception
-        If `method_index` does not correspond to any predefined method, an exception is raised indicating
-        no valid method was found.
 
     Notes
     -----
@@ -182,3 +175,5 @@ def perform_feature_selection_method(x, y, method_index):
         return information_gain_feature_selection(x, y)
     elif method_index == VARIANCE_THRESHOLD:
         return variance_threshold_feature_selection(x)
+    else:
+        return x.columns

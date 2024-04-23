@@ -722,3 +722,32 @@ def perform_oversampling_deep_method(train_data, method_index, num_tuples_to_gen
         generate_and_save_synthetic_data_with_cgan(train_data, num_tuples_to_generate / 2)
     else:
         raise Exception("No method found!!!")
+
+
+def get_deep_model_name(model_number):
+    model_names = {
+        '0': "none",
+        '1': "BAYESIAN_NETWORK",
+        '2': "CTGAN",
+        '3': "WGAN",
+        '4': "TVAE",
+        '5': "COPULA_GAN",
+        '6': "CGAN"
+    }
+    return model_names.get(model_number, "Unknown Model")
+
+
+def get_basic_method_name(technique_number):
+    technique_dict = {
+        '0': "none",
+        '1': "ROS",
+        '2': "SMOTE",
+        '3': "borderline SMOTE",
+        '4': "safe level SMOTE",
+        '5': "ADASYN",
+        '6': "k-means SMOTE",
+        '7': "dbscan SMOTE",
+        '8': "gaussian mixture clustering"
+    }
+
+    return technique_dict.get(technique_number, "Unknown Technique")

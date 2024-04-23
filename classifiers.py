@@ -8,6 +8,11 @@ import pandas as pd
 from oversampling import perform_oversampling_method, perform_safe_level_smote, perform_gaussian_mixture_clustering
 from config_loader import ConfigLoader
 import csv
+from sklearn.ensemble import AdaBoostRegressor, RandomForestRegressor
+from sklearn.linear_model import LinearRegression
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+import numpy as np
 
 
 def evaluate_classifier(clf, x_train, x_test, y_train, y_test, do_fit):
@@ -42,7 +47,7 @@ def evaluate_classifier(clf, x_train, x_test, y_train, y_test, do_fit):
     y_pred = clf.predict(x_test)
 
     # Calculate evaluation metrics
-    #accuracy = accuracy_score(y_test, y_pred)
+    # accuracy = accuracy_score(y_test, y_pred)
     accuracy = balanced_accuracy_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred, average='weighted')
     recall = recall_score(y_test, y_pred, average='weighted')
@@ -126,7 +131,7 @@ def run_classifiers_after_deep(x_train, y_train, test_data):
     y_train : Series
         The training labels.
     test_data : dict
-        A dictionary grouping test data by some criteria, typically after some form of data transformation or augmentation.
+        A dictionary grouping test data.
 
     Returns
     -------
@@ -185,3 +190,100 @@ def write_results_to_csv(csv_file_path, results, write_classes):
             model, user_id, classe = key
             if classe in write_classes:
                 csv_writer.writerow([model, user_id, classe] + list(values))
+
+
+def run_regressors_after_deep(x_train, y_train, test_data):
+    """
+    Evaluates multiple regressors on test data after training with a common set of training data,
+    after deep learning pre-processing for oversampling.
+
+    Parameters
+    ----------
+    x_train : DataFrame
+        The training feature dataset.
+    y_train : Series
+        The training labels.
+    test_data : dict
+        A dictionary grouping test data.
+
+    Returns
+    -------
+    dict
+        A dictionary containing evaluation results for each regressor and test group, indexed by regressor name, test group key.
+    """
+    # Initialize regressors
+    regressors = {
+        'AdaBoost': AdaBoostRegressor(),
+        'KNN': KNeighborsRegressor(),
+        'Linear Regression': LinearRegression(),
+        'Random Forest': RandomForestRegressor()
+    }
+
+    results = {}
+
+    for reg_name, reg in regressors.items():
+        reg.fit(x_train, y_train)
+        for test_key, test_group in test_data:
+            x_test = test_group.drop(columns=['y'])
+            y_test = test_group['y']
+            y = y_test.iloc[-1]
+            y_pred = reg.predict(x_test)
+            y_pred_mean = np.mean(y_pred)
+            print('Running regressor {}...'.format(reg_name))
+            print('test key: {}'.format(test_key))
+            results[reg_name, test_key, y, y_pred_mean] = evaluate_regressor(reg, x_test, y_test)
+
+    return results
+
+
+def evaluate_regressor(reg, x_test, y_test):
+    """
+    Evaluates a regressor on given training and test datasets and calculates performance metrics.
+
+    Parameters
+    ----------
+    reg : Regressor
+        The regressor instance to evaluate.
+    x_test : DataFrame
+        The test feature dataset.
+    y_test : Series
+        The test labels.
+
+    Returns
+    -------
+    tuple
+        A tuple containing Mean Squared Error and R^2 score of the regressor.
+    """
+    y_pred = reg.predict(x_test)
+
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+
+    return mse, r2
+
+
+def write_results_to_csv_regressor(csv_file_path, results):
+    """
+    Writes the results of classifier evaluations to a CSV file.
+
+    Parameters
+    ----------
+    csv_file_path : str
+        The path to the CSV file where results will be saved.
+    results : dict
+        A dictionary containing evaluation metrics for each classifier, indexed by model name, user ID, and class label.
+
+    Side Effects
+    ------------
+    Writes to a CSV file specified by `csv_file_path`.
+    """
+    with open(csv_file_path, 'w', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile)
+
+        # Write header row
+        csv_writer.writerow(['Model', 'User_id', 'Real_y', 'Pred_y', 'MSE', 'R2'])
+
+        # Write data rows
+        for key, values in results.items():
+            model, user_id, real_y, pred_y = key
+            csv_writer.writerow([model, user_id, real_y, pred_y] + list(values))
