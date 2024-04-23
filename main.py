@@ -72,7 +72,7 @@ def main():
     users_df = df.groupby(df.user_id)
     # Run classifiers on the combined data
     results = run_classifiers(users_df)
-    write_results_to_csv(f"output_basic_oversampled_{get_basic_method_name(oversampling_deep_algorithm_to_run)}.csv",
+    write_results_to_csv(f"output_basic_oversampled_{get_basic_method_name(oversampling_algorithm_to_run)}.csv",
                          results, write_classes)
 
 
