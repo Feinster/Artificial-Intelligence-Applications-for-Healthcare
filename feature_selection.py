@@ -89,7 +89,7 @@ def extra_trees_feature_selection(x, y, importance_threshold=0.01):
 
 
 # Information Gain (Mutual Information)
-def information_gain_feature_selection(x, y, info_threshold=0.1):
+def information_gain_feature_selection(x, y, info_threshold=0.00797):
     """
     Selects features based on the mutual information (information gain) between features and the target variable.
 
@@ -100,7 +100,7 @@ def information_gain_feature_selection(x, y, info_threshold=0.1):
     y : array-like
         Target variable dataset.
     info_threshold : float, optional
-        The threshold of information gain above which a feature is considered important (default is 0.1).
+        The threshold of information gain above which a feature is considered important (default is 0.00797).
 
     Returns
     -------
@@ -113,22 +113,24 @@ def information_gain_feature_selection(x, y, info_threshold=0.1):
 
 
 # Variance Threshold Method
-def variance_threshold_feature_selection(x, threshold=0.1):
+def variance_threshold_feature_selection(x):
     """
-    Selects features with a variance above a specified threshold.
+    Selects features with a variance above a threshold based on mean variance.
+    It doesn't work if data standardization is done first.
 
     Parameters
     ----------
     x : DataFrame
         Features dataset.
-    threshold : float, optional
-        The threshold that a feature's variance must exceed to be retained (default is 0.1).
 
     Returns
     -------
     selected_features : Index
         The names of the selected features.
     """
+    variances = x.var()
+    mean_variance = variances.mean()
+    threshold = mean_variance
     selector = VarianceThreshold(threshold=threshold)
     selector.fit(x)
     selected_features = x.columns[selector.get_support()]
