@@ -13,6 +13,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 import numpy as np
+from sklearn.svm import SVC
 
 
 def evaluate_classifier(clf, x_train, x_test, y_train, y_test, do_fit):
@@ -47,15 +48,15 @@ def evaluate_classifier(clf, x_train, x_test, y_train, y_test, do_fit):
     y_pred = clf.predict(x_test)
 
     # Calculate evaluation metrics
-    # accuracy = accuracy_score(y_test, y_pred)
-    accuracy = balanced_accuracy_score(y_test, y_pred)
+    accuracy = accuracy_score(y_test, y_pred)
+    balanced_accuracy = balanced_accuracy_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred, average='weighted')
     recall = recall_score(y_test, y_pred, average='weighted')
     f1 = f1_score(y_test, y_pred, average='weighted')
 
     # print(f'Modello: {clf}, Accuracy: {accuracy}, Precision:{precision}, Recall:{recall}, F1-score:{f1}')
 
-    return accuracy, precision, recall, f1
+    return accuracy, balanced_accuracy, precision, recall, f1
 
 
 def run_classifiers(users_df):
@@ -143,7 +144,8 @@ def run_classifiers_after_deep(x_train, y_train, test_data):
         'AdaBoost': AdaBoostClassifier(algorithm='SAMME'),
         'KNN': KNeighborsClassifier(),
         'Logistic Regression': LogisticRegression(max_iter=1000),
-        'Random Forest': RandomForestClassifier()
+        'Random Forest': RandomForestClassifier(),
+        'SVM': SVC(kernel='linear')
     }
 
     results = {}
@@ -183,7 +185,7 @@ def write_results_to_csv(csv_file_path, results, write_classes):
         csv_writer = csv.writer(csvfile)
 
         # Write header row
-        csv_writer.writerow(['Model', 'User_id', 'Class', 'Acc', 'Precision', 'Recall', 'F1-score'])
+        csv_writer.writerow(['Model', 'User_id', 'Class', 'Acc', 'Bal_Acc', 'Precision', 'Recall', 'F1-score'])
 
         # Write data rows
         for key, values in results.items():
