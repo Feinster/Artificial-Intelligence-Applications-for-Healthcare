@@ -53,10 +53,10 @@ def main():
     '''
     #regression
     results_after_deep = run_regressors_after_deep(x_train_after_deep, y_train_after_deep, df_test)
-    write_results_to_csv_regressor("output_synthetic.csv", results_after_deep, write_classes)
+    write_results_to_csv_regressor("output_synthetic.csv", results_after_deep)
 
     results_after_deep = run_regressors_after_deep(x_train, y_train, df_test)
-    write_results_to_csv_regressor("output_no_synthetic.csv", results_after_deep, write_classes)
+    write_results_to_csv_regressor("output_no_synthetic.csv", results_after_deep)
     '''
     results_after_deep = run_classifiers_after_deep(x_train_after_deep, y_train_after_deep, df_test)
     write_results_to_csv(f"output_synthetic_{get_deep_model_name(oversampling_deep_algorithm_to_run)}.csv",
