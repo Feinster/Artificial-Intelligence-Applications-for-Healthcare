@@ -394,7 +394,7 @@ def generate_and_save_synthetic_data_with_ctgan(train_data, num_tuples_to_genera
     model_file_path = 'ctgan_model.pkl'
     if not os.path.exists(model_file_path):
         batch_size = 500
-        epochs = 500
+        epochs = 300
         learning_rate = 2e-4
         beta_1 = 0.5
         beta_2 = 0.9
@@ -513,7 +513,7 @@ def generate_and_save_synthetic_data_with_wgan(train_data, num_samples_per_class
         if not os.path.exists(model_file_path):
             # WGAN training parameters
             batch_size = 128
-            epochs = 500
+            epochs = 300
             learning_rate = 5e-4
             beta_1 = 0.5
             beta_2 = 0.9
