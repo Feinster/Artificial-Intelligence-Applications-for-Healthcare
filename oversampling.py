@@ -637,7 +637,7 @@ def generate_and_save_synthetic_data_with_CopulaGAN(train_data, num_tuples_to_ge
         )
         print("CopulaGAN model trained and saved")
     else:
-        synthesizer = TVAESynthesizer.load(
+        synthesizer = CopulaGANSynthesizer.load(
             filepath=model_file_path
         )
 
