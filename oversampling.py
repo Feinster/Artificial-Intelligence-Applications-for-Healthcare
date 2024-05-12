@@ -713,13 +713,13 @@ def perform_oversampling_deep_method(train_data, method_index, num_tuples_to_gen
     elif method_index == CTGAN:
         generate_and_save_synthetic_data_with_ctgan(train_data, num_tuples_to_generate)
     elif method_index == WGAN:
-        generate_and_save_synthetic_data_with_wgan(train_data, num_tuples_to_generate / 2)
+        generate_and_save_synthetic_data_with_wgan(train_data, int(num_tuples_to_generate / 2))
     elif method_index == TVAE:
         generate_and_save_synthetic_data_with_TVAE(train_data, num_tuples_to_generate)
     elif method_index == COPULA_GAN:
         generate_and_save_synthetic_data_with_CopulaGAN(train_data, num_tuples_to_generate)
     elif method_index == CGAN:
-        generate_and_save_synthetic_data_with_cgan(train_data, num_tuples_to_generate / 2)
+        generate_and_save_synthetic_data_with_cgan(train_data, int(num_tuples_to_generate / 2))
     else:
         raise Exception("No method found!!!")
 
