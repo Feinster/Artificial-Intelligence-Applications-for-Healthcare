@@ -33,8 +33,7 @@ def main():
     df_after_deep = pd.read_csv('synthetic_data.csv')
     for column in train_data_for_deep.columns:
         if column != 'y':
-            pass
-            # plot_feature_comparison(train_data_for_deep, df_after_deep, column)
+            plot_feature_comparison(train_data_for_deep, df_after_deep, column)
 
     evaluate_and_save_quality_details(train_data_for_deep, df_after_deep)
 
