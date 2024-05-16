@@ -30,20 +30,21 @@ def main():
         perform_oversampling_deep_method(train_data_for_deep, oversampling_deep_algorithm_to_run,
                                          num_tuples_to_generate)
 
-    df_after_deep = pd.read_csv('synthetic_data.csv')
-    for column in train_data_for_deep.columns:
-        if column != 'y':
-            plot_feature_comparison(train_data_for_deep, df_after_deep, column)
+    if os.path.exists("synthetic_data.csv"):
+        df_after_deep = pd.read_csv('synthetic_data.csv')
+        for column in train_data_for_deep.columns:
+            if column != 'y':
+                plot_feature_comparison(train_data_for_deep, df_after_deep, column)
 
-    evaluate_and_save_quality_details(train_data_for_deep, df_after_deep)
+        evaluate_and_save_quality_details(train_data_for_deep, df_after_deep)
 
-    # bilancio i dati sintetici se non lo fossero già
-    balanced_sample = balance_data(df_after_deep, 'y')
+        # bilancio i dati sintetici se non lo fossero già
+        balanced_sample = balance_data(df_after_deep, 'y')
 
-    # lancio i classificatori, passando i dati sintetici come train set,
-    # mentre uso il 30 lasciato all'inizio come test set
-    x_train_after_deep = balanced_sample.drop(columns=['y'])
-    y_train_after_deep = balanced_sample['y']
+        # lancio i classificatori, passando i dati sintetici come train set,
+        # mentre uso il 30 lasciato all'inizio come test set
+        x_train_after_deep = balanced_sample.drop(columns=['y'])
+        y_train_after_deep = balanced_sample['y']
 
     test_data_user_id = test_data.user_id
     test_data = test_data[['y'] + selected_train_features.tolist()]
@@ -66,7 +67,7 @@ def main():
     results_after_deep = run_classifiers_after_deep(x_train, y_train, df_test)
     write_results_to_csv(f"output_no_synthetic_{get_deep_model_name(oversampling_deep_algorithm_to_run)}.csv",
                          results_after_deep, write_classes)
-
+   
     # lancio i classificatori senza operazioni di deep learning
     users_df = df.groupby(df.user_id)
     # Run classifiers on the combined data
