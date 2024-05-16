@@ -168,3 +168,5 @@ user_*/
 /cache
 /summaries
 *.html
+/Script
+/test

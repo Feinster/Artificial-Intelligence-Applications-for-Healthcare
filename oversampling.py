@@ -16,6 +16,8 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from openai import OpenAI
 from dotenv import load_dotenv
+from collections import Counter
+import numpy as np
 
 ROS = '1'
 SMOTE_METHOD = '2'
@@ -23,6 +25,7 @@ BORDERLINE_SMOTE = '3'
 ADASYN_METHOD = '5'
 KMEANS_SMOTE = '6'
 DBSCAN_SMOTE = '7'
+GMM = '8'
 
 BAYESIAN_NETWORK = '1'
 CTGAN = '2'
@@ -218,31 +221,56 @@ def perform_dbscan_bsmote(x, y):
     return x, y
 
 
-def perform_gaussian_mixture_clustering(x, n_components=2, random_state=0):
+def perform_gmm_oversampling(x, y, n_components=3, random_state=0):
     """
-    Performs clustering using a Gaussian Mixture Model (GMM).
-    This method estimates the parameters of a Gaussian mixture distribution to cluster the data.
+    Performs oversampling using a Gaussian Mixture Model (GMM) to balance the class distribution in a binary classification dataset.
+    This method fits a GMM to the entire feature set and uses it to generate synthetic samples for the minority 
+    class to match the number of samples in the majority class.
 
     Parameters
     ----------
     x : DataFrame
         Features dataset.
+    y : array-like
+        Target variable dataset.
     n_components : int, optional
-        The number of mixture components (default is 2).
+        The number of mixture components for the GMM. More components create a more complex model (default is 3).
     random_state : int, optional
-        The seed used by the random number generator (default is 0).
+        The seed used by the random number generator to ensure reproducibility (default is 0).
 
     Returns
     -------
-    cluster_centers : array-like
-        The mean of each mixture component.
-    labels : array-like
-        Labels for each point based on the component they belong to.
+    x_resampled : DataFrame
+        Resampled features dataset.
+    y_resampled : array-like
+        Resampled target variable dataset.
     """
+    # Fit a Gaussian Mixture Model on the entire dataset
     gm = GaussianMixture(n_components=n_components, random_state=random_state).fit(x)
-    cluster_centers = gm.means_
-    labels = gm.predict(x)
-    return cluster_centers, labels
+    
+    # Count class occurrences
+    class_counts = Counter(y)
+    # Identify majority and minority classes
+    majority_class = max(class_counts, key=class_counts.get)
+    minority_class = min(class_counts, key=class_counts.get)
+    majority_count = class_counts[majority_class]
+    minority_count = class_counts[minority_class]
+    
+    # Calculate the number of samples to generate
+    n_samples = majority_count - minority_count
+    
+    # Generate synthetic samples for the minority class
+    minority_mask = y == minority_class
+    x_minority = x[minority_mask]
+    
+    # Sampling new points
+    synthetic_samples, _ = gm.sample(n_samples)
+
+    # Concatenate synthetic samples to the original dataset
+    x_balanced = np.vstack([x, synthetic_samples])
+    y_balanced = np.concatenate([y, [minority_class] * n_samples])
+
+    return x_balanced, y_balanced
 
 
 def perform_oversampling_method(x, y, method_index):
@@ -283,6 +311,8 @@ def perform_oversampling_method(x, y, method_index):
         x_resampled, y_resampled = perform_kmeans_smote(x, y)
     elif method_index == DBSCAN_SMOTE:
         x_resampled, y_resampled = perform_dbscan_bsmote(x, y)
+    elif method_index == GMM:
+        x_resampled, y_resampled = perform_gmm_oversampling(x, y)    
     else:
         return x, y
 

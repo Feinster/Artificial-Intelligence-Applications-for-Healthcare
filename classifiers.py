@@ -5,7 +5,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, balanced_accuracy_score
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
-from oversampling import perform_oversampling_method, perform_safe_level_smote, perform_gaussian_mixture_clustering
+from oversampling import perform_oversampling_method, perform_safe_level_smote
 from config_loader import ConfigLoader
 import csv
 from sklearn.ensemble import AdaBoostRegressor, RandomForestRegressor
@@ -102,9 +102,6 @@ def run_classifiers(users_df):
             x_train_scaled = scaler.transform(x_train)
             y_train = train_data['y']
             x_test = test_group.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
-
-            if oversampling_algorithm_to_run == '8':
-                cluster_centers, labels = perform_gaussian_mixture_clustering(x_test)
 
             x_test_scaled = scaler.transform(x_test)
             y_test = test_group['y']
