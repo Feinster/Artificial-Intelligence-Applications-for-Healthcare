@@ -49,25 +49,26 @@ def main():
     test_data_user_id = test_data.user_id
     test_data = test_data[['y'] + selected_train_features.tolist()]
     df_test = test_data.groupby(test_data_user_id)
-
+    
     '''
     #regression
     results_after_deep = run_regressors_after_deep(x_train_after_deep, y_train_after_deep, df_test)
     write_results_to_csv_regressor("output_synthetic.csv", results_after_deep)
-
+    
     results_after_deep = run_regressors_after_deep(x_train, y_train, df_test)
     write_results_to_csv_regressor("output_no_synthetic.csv", results_after_deep)
     '''
+    
     results_after_deep = run_classifiers_after_deep(x_train_after_deep, y_train_after_deep, df_test)
     write_results_to_csv(f"output_synthetic_{get_deep_model_name(oversampling_deep_algorithm_to_run)}.csv",
                          results_after_deep, write_classes)
-
+    
     # lancio i classificatori passando il 70% iniziale come train set
     # mentre uso il 30 lasciato all'inizio come test set
     results_after_deep = run_classifiers_after_deep(x_train, y_train, df_test)
     write_results_to_csv(f"output_no_synthetic_{get_deep_model_name(oversampling_deep_algorithm_to_run)}.csv",
                          results_after_deep, write_classes)
-   
+                         
     # lancio i classificatori senza operazioni di deep learning
     users_df = df.groupby(df.user_id)
     # Run classifiers on the combined data
@@ -297,7 +298,7 @@ def plot_feature_comparison(real_data, synthetic_data, feature_name, output_path
     pio.write_html(fig, file=filename)
 
 
-def evaluate_and_save_quality_details(real_data, synthetic_data):
+def evaluate_and_save_quality_details(real_data, synthetic_data , output_path="./iframe_figures/"):
     """
     Evaluates the quality of synthetic data compared to real data using statistical metrics and saves the details to CSV files.
 
@@ -326,6 +327,17 @@ def evaluate_and_save_quality_details(real_data, synthetic_data):
 
     shapes_details.to_csv('column_shapes_details.csv', index=False)
     trends_details.to_csv('column_pair_trends_details.csv', index=False)
+    
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+        
+    fig = quality_report.get_visualization(property_name='Column Shapes')
+    filename = f"{output_path}report_column_shapes.html"
+    pio.write_html(fig, file=filename)
+    
+    fig = quality_report.get_visualization(property_name='Column Pair Trends')
+    filename = f"{output_path}report_column_pair_trends.html"
+    pio.write_html(fig, file=filename)
 
 
 if __name__ == "__main__":
