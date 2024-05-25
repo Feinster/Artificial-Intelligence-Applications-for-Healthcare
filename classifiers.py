@@ -82,7 +82,8 @@ def run_classifiers(users_df):
         'AdaBoost': AdaBoostClassifier(algorithm='SAMME'),
         'KNN': KNeighborsClassifier(),
         'Logistic Regression': LogisticRegression(max_iter=1000),
-        'Random Forest': RandomForestClassifier()
+        'Random Forest': RandomForestClassifier(),
+        'SVM': SVC(kernel='linear')
     }
 
     scaler = StandardScaler()
