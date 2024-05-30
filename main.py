@@ -117,6 +117,8 @@ def process_user_folders():
     """
     current_directory = os.getcwd()
     all_combined_features = []  # List to store combined features for all users
+    all_users_actigraph_data = []
+    all_users_rr_data = []
 
     # Loop through folders for each user
     for user_folder in os.listdir(current_directory):
@@ -136,6 +138,16 @@ def process_user_folders():
             # Filter actigraphy and RR data by sleep intervals
             filtered_actigraphy_data, filtered_rr_data = filter_data_by_sleep_intervals(user_folder,
                                                                                         current_directory)
+
+            for index, row in filtered_actigraphy_data.iterrows():
+                data = {'user_id': user_id}
+                data.update(row.to_dict())
+                all_users_actigraph_data.append(data)
+
+            for index, row in filtered_rr_data.iterrows():
+                data = {'user_id': user_id}
+                data.update(row.to_dict())
+                all_users_rr_data.append(data)
 
             # Extract features from actigraphy data
             actigraphy_features = extract_actigraphy_features(filtered_actigraphy_data)
@@ -160,8 +172,20 @@ def process_user_folders():
     # Convert the list of dictionaries into a pandas DataFrame
     df = pd.DataFrame(all_combined_features)
 
-    # Write the DataFrame to a CSV file
+    # Write DataFrame to a CSV file
     df.to_csv('combined_features.csv', index=False)
+
+    df_actigraph_data = pd.DataFrame(all_users_actigraph_data)
+    actigraph_columns = ['user_id', 'Axis1', 'Axis2', 'Axis3', 'Steps', 'HR', 'Inclinometer Off',
+                         'Inclinometer Standing',
+                         'Inclinometer Sitting', 'Inclinometer Lying', 'Vector Magnitude', 'day', 'time']
+    df_actigraph_data[actigraph_columns].to_csv('all_users_actigraph_data.csv', index=False)
+
+    df_rr_data = pd.DataFrame(all_users_rr_data)
+    rr_columns = ['user_id', 'ibi_s', 'day', 'time']
+    df_rr_data[rr_columns].to_csv('all_users_rr_data.csv', index=False)
+
+    print("Features processed!")
     return df
 
 
