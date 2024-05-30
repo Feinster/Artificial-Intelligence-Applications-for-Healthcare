@@ -140,12 +140,12 @@ def process_user_folders():
                                                                                         current_directory)
 
             for index, row in filtered_actigraphy_data.iterrows():
-                data = {'user_id': user_id}
+                data = {'user_id': user_id, 'y': y}
                 data.update(row.to_dict())
                 all_users_actigraph_data.append(data)
 
             for index, row in filtered_rr_data.iterrows():
-                data = {'user_id': user_id}
+                data = {'user_id': user_id, 'y': y}
                 data.update(row.to_dict())
                 all_users_rr_data.append(data)
 
@@ -178,11 +178,11 @@ def process_user_folders():
     df_actigraph_data = pd.DataFrame(all_users_actigraph_data)
     actigraph_columns = ['user_id', 'Axis1', 'Axis2', 'Axis3', 'Steps', 'HR', 'Inclinometer Off',
                          'Inclinometer Standing',
-                         'Inclinometer Sitting', 'Inclinometer Lying', 'Vector Magnitude', 'day', 'time']
+                         'Inclinometer Sitting', 'Inclinometer Lying', 'Vector Magnitude', 'day', 'time', 'y']
     df_actigraph_data[actigraph_columns].to_csv('all_users_actigraph_data.csv', index=False)
 
     df_rr_data = pd.DataFrame(all_users_rr_data)
-    rr_columns = ['user_id', 'ibi_s', 'day', 'time']
+    rr_columns = ['user_id', 'ibi_s', 'day', 'time', 'y']
     df_rr_data[rr_columns].to_csv('all_users_rr_data.csv', index=False)
 
     print("Features processed!")
