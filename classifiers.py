@@ -14,7 +14,7 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 import numpy as np
 from sklearn.svm import SVC
-
+import time
 
 def evaluate_classifier(clf, x_train, x_test, y_train, y_test, do_fit):
     """
@@ -88,7 +88,8 @@ def run_classifiers(users_df):
 
     scaler = StandardScaler()
     results = {}
-
+    execution_time = 0
+    
     for clf_name, clf in classifiers.items():
         for test_key, test_group in users_df:
 
@@ -109,12 +110,16 @@ def run_classifiers(users_df):
             y = y_test.iloc[-1]
 
             # Perform oversampling
+            start_time = time.time()
             x_train_scaled, y_train = perform_oversampling_method(x_train_scaled, y_train,
                                                                   oversampling_algorithm_to_run)
+            end_time = time.time()
+            execution_time += end_time - start_time
 
             results[clf_name, test_key, y] = evaluate_classifier(clf, x_train_scaled, x_test_scaled, y_train, y_test,
                                                                  True)
-
+                                                                 
+    print(f"Execution time: {execution_time} seconds")
     return results
 
 

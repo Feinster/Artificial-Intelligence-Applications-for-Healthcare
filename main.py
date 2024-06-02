@@ -12,7 +12,7 @@ from sdv.evaluation.single_table import get_column_plot
 from sdv.evaluation.single_table import evaluate_quality
 from oversampling import perform_oversampling_deep_method, get_deep_model_name, get_basic_method_name
 import plotly.io as pio
-
+import time
 
 def main():
     config = ConfigLoader.get_instance()
@@ -27,8 +27,12 @@ def main():
     train_data_for_deep, test_data, x_train, y_train, x_test, y_test, selected_train_features = prepare_data(df, config)
 
     if oversampling_deep_algorithm_to_run != '0':
+        start_time = time.time()
         perform_oversampling_deep_method(train_data_for_deep, oversampling_deep_algorithm_to_run,
                                          num_tuples_to_generate)
+        end_time = time.time()
+        execution_time = end_time - start_time
+        print(f"Execution time: {execution_time} seconds")
 
     if os.path.exists("synthetic_data.csv"):
         df_after_deep = pd.read_csv('synthetic_data.csv')
@@ -68,7 +72,15 @@ def main():
     results_after_deep = run_classifiers_after_deep(x_train, y_train, df_test)
     write_results_to_csv(f"output_no_synthetic_{get_deep_model_name(oversampling_deep_algorithm_to_run)}.csv",
                          results_after_deep, write_classes)
-                         
+
+    '''
+    deccomentare per lanciare i metodi standard in modalità 70-30
+    x_train_scaled, y_train = perform_oversampling_method(x_train, y_train, oversampling_algorithm_to_run)
+    results_after_deep = run_classifiers_after_deep(x_train_scaled, y_train, df_test)
+    write_results_to_csv(f"output_no_synthetic_{get_deep_model_name(oversampling_deep_algorithm_to_run)}.csv",
+                         results_after_deep, write_classes)
+    '''
+
     # lancio i classificatori senza operazioni di deep learning
     users_df = df.groupby(df.user_id)
     # Run classifiers on the combined data
@@ -163,7 +175,7 @@ def process_user_folders():
                         'day': minute_key[0],
                         'hour': minute_key[1],
                         'minute': minute_key[2],
-                        **actigraphy_features[minute_key],  # Add all actigraphy features
+                        #**actigraphy_features[minute_key],  # Add all actigraphy features
                         **rr_features[minute_key],  # Add all RR interval features
                         'y': int(y)
                     }
