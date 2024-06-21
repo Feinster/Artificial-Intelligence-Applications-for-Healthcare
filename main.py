@@ -89,6 +89,15 @@ def main():
                          results, write_classes)
 
 
+def evaluate_chatgpt_data():
+    df_chatgpt = pd.read_csv('syntethic_data_chatgpt.csv')
+    train_data_for_deep = pd.read_csv('train_data_deep.csv')
+    for column in train_data_for_deep.columns:
+        if column != 'y':
+            plot_feature_comparison(train_data_for_deep, df_chatgpt, column)
+    evaluate_and_save_quality_details(train_data_for_deep, df_chatgpt)
+
+
 def check_and_process_combined_features():
     """
     Processes combined features and applying necessary transformations.
@@ -153,12 +162,12 @@ def process_user_folders():
 
             for index, row in filtered_actigraphy_data.iterrows():
                 data = {'user_id': user_id, 'y': y}
-                data.update(row.to_dict())
+                data.update({k: v for k, v in row.to_dict().items() if k not in ['user_id', 'y']})
                 all_users_actigraph_data.append(data)
 
             for index, row in filtered_rr_data.iterrows():
                 data = {'user_id': user_id, 'y': y}
-                data.update(row.to_dict())
+                data.update({k: v for k, v in row.to_dict().items() if k not in ['user_id', 'y']})
                 all_users_rr_data.append(data)
 
             # Extract features from actigraphy data
@@ -168,7 +177,7 @@ def process_user_folders():
             rr_features = extract_rr_features(filtered_rr_data)
 
             # Combine features for each minute
-            for minute_key in actigraphy_features.keys():
+            for minute_key in rr_features.keys():
                 if minute_key in rr_features.keys():  # Ensure data exists for both sensors for this minute
                     minute_dict = {
                         'user_id': user_id,
