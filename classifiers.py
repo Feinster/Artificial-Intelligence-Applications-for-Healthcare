@@ -98,12 +98,15 @@ def run_classifiers(users_df):
             if oversampling_algorithm_to_run == '4':
                 train_data = perform_safe_level_smote(train_data, 'y')
 
-            x_train = train_data.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
+            columns_to_drop = ['user_id', 'day', 'hour', 'minute', 'y', 'time']
+            existing_columns = [col for col in columns_to_drop if col in train_data.columns]
+            x_train = train_data.drop(columns=existing_columns)
 
             scaler.fit(x_train)
             x_train_scaled = scaler.transform(x_train)
             y_train = train_data['y']
-            x_test = test_group.drop(columns=['user_id', 'day', 'hour', 'minute', 'y'])
+            existing_columns = [col for col in columns_to_drop if col in test_group.columns]
+            x_test = test_group.drop(columns=existing_columns)
 
             x_test_scaled = scaler.transform(x_test)
             y_test = test_group['y']

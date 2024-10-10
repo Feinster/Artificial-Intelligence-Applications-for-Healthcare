@@ -254,3 +254,47 @@ def filter_data_by_sleep_intervals(user_folder, current_directory):
     filtered_rr_data = pd.concat(filtered_rr_data)
 
     return filtered_actigraphy_data, filtered_rr_data
+
+
+def process_rr_data(rr_data, output_csv):
+    all_combined_features = []
+
+    # Extract features for each user, day, hour, and minute
+    for user_id, user_data in rr_data.groupby('user_id'):
+        y = user_data['y'].iloc[0]  # Assuming 'y' is constant per user
+
+        minute_features = {}
+        for index, row in user_data.iterrows():
+            day = row['day']
+            time = row['time']
+            hour, minute, _ = time.split(':')
+            key = tuple(map(int, (day, hour, minute)))
+            if key not in minute_features:
+                minute_features[key] = []
+            minute_features[key].append(row['ibi_s'])
+
+        # Calculate statistics for 'ibi_s' for each minute
+        for minute_key, data in minute_features.items():
+            if data:
+                data = np.array(data)
+                minute_dict = {
+                    #'user_id': user_id,
+                    #'day': minute_key[0],
+                    #'hour': minute_key[1],
+                    #'minute': minute_key[2],
+                    'mean_ibi_s': np.nan_to_num(np.mean(data), nan=0),
+                    'median_ibi_s': np.nan_to_num(np.median(data), nan=0),
+                    'var_ibi_s': np.nan_to_num(np.var(data), nan=0),
+                    'std_ibi_s': np.nan_to_num(np.std(data), nan=0),
+                    'entropy_ibi_s': np.nan_to_num(entropy(data), nan=0),
+                    'skew_ibi_s': np.nan_to_num(skew(data), nan=0),
+                    'kurtosis_ibi_s': np.nan_to_num(kurtosis(data), nan=0),
+                    'iqr_ibi_s': np.nan_to_num(np.percentile(data, 75) - np.percentile(data, 25), nan=0),
+                    'mad_ibi_s': np.nan_to_num(np.mean(np.abs(data - np.mean(data))), nan=0),
+                    'y': int(y)
+                }
+                all_combined_features.append(minute_dict)
+
+    # Convert list of dictionaries to DataFrame and save to CSV
+    df_combined = pd.DataFrame(all_combined_features)
+    df_combined.to_csv(output_csv, index=False)
